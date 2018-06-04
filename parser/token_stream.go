@@ -1,7 +1,5 @@
 package parser
 
-import ()
-
 // A tokenStream consumes a byteStream to genereate tokens.
 type tokenStream struct {
 	stream     *byteStream
@@ -75,6 +73,9 @@ const (
 	VAR
 	RETURN
 	FUNCTION
+	DO
+	WHILE
+	FOR
 
 	// Flow control
 	IF
@@ -197,6 +198,12 @@ func classifyIdentifier(id string) (TokenType, bool) {
 		return VOID, true
 	case "function":
 		return FUNCTION, false
+	case "do":
+		return DO, false
+	case "while":
+		return WHILE, false
+	case "for":
+		return FOR, false
 	case "var":
 		return VAR, false
 	}

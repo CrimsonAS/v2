@@ -15,62 +15,62 @@ func TestEmptyParse(t *testing.T) {
 }
 
 func TestLiterals(t *testing.T) {
-	ep1 := &Program{body: []Node{&StringLiteral{tok: token{tokenType: STRING_LITERAL, value: "use strict"}}}}
+	ep1 := &Program{body: []Node{&ExpressionStatement{X: &StringLiteral{tok: token{tokenType: STRING_LITERAL, value: "use strict"}}}}}
 	assert.Equal(t, Parse("\"use strict\""), ep1)
 
-	ep2 := &Program{body: []Node{&NumericLiteral{tok: token{tokenType: NUMERIC_LITERAL, value: "123.45"}}}}
+	ep2 := &Program{body: []Node{&ExpressionStatement{X: &NumericLiteral{tok: token{tokenType: NUMERIC_LITERAL, value: "123.45"}}}}}
 	assert.Equal(t, Parse("123.45"), ep2)
 
-	ep3 := &Program{body: []Node{&TrueLiteral{tok: token{tokenType: TRUE, value: "true"}}}}
+	ep3 := &Program{body: []Node{&ExpressionStatement{X: &TrueLiteral{tok: token{tokenType: TRUE, value: "true"}}}}}
 	assert.Equal(t, Parse("true"), ep3)
 
-	ep4 := &Program{body: []Node{&FalseLiteral{tok: token{tokenType: FALSE, value: "false"}}}}
+	ep4 := &Program{body: []Node{&ExpressionStatement{X: &FalseLiteral{tok: token{tokenType: FALSE, value: "false"}}}}}
 	assert.Equal(t, Parse("false"), ep4)
 
-	ep5 := &Program{body: []Node{&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}}}
+	ep5 := &Program{body: []Node{&ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}}}}
 	assert.Equal(t, Parse("a"), ep5)
 
-	ep6 := &Program{body: []Node{&ThisLiteral{tok: token{tokenType: THIS, value: "this"}}}}
+	ep6 := &Program{body: []Node{&ExpressionStatement{X: &ThisLiteral{tok: token{tokenType: THIS, value: "this"}}}}}
 	assert.Equal(t, Parse("this"), ep6)
 
-	ep7 := &Program{body: []Node{&NullLiteral{tok: token{tokenType: NULL, value: "null"}}}}
+	ep7 := &Program{body: []Node{&ExpressionStatement{X: &NullLiteral{tok: token{tokenType: NULL, value: "null"}}}}}
 	assert.Equal(t, Parse("null"), ep7)
 
-	ep8 := &Program{body: []Node{&ThisLiteral{tok: token{tokenType: THIS, value: "this", pos: 1, col: 1}}}}
+	ep8 := &Program{body: []Node{&ExpressionStatement{X: &ThisLiteral{tok: token{tokenType: THIS, value: "this", pos: 1, col: 1}}}}}
 	assert.Equal(t, Parse("(this)"), ep8)
 }
 
 func TestArrayLiterals(t *testing.T) {
-	ep1 := &Program{body: []Node{&ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}}}}
+	ep1 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}}}}}
 	assert.Equal(t, Parse("[]"), ep1)
 
-	ep2 := &Program{body: []Node{&ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 1, col: 1}}}}}}
+	ep2 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 1, col: 1}}}}}}}
 	assert.Equal(t, Parse("[true]"), ep2)
 
-	ep3 := &Program{body: []Node{&ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
+	ep3 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
 		&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 1, col: 1}},
 		&FalseLiteral{tok: token{tokenType: FALSE, value: "false", pos: 7, col: 7}},
-	}}}}
+	}}}}}
 	assert.Equal(t, Parse("[true, false]"), ep3)
 
-	ep4 := &Program{body: []Node{&ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
+	ep4 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
 		nil,
 		&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 3, col: 3}},
 		&FalseLiteral{tok: token{tokenType: FALSE, value: "false", pos: 9, col: 9}},
-	}}}}
+	}}}}}
 	assert.Equal(t, Parse("[, true, false]"), ep4)
 
-	ep5 := &Program{body: []Node{&ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
+	ep5 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
 		&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 1, col: 1}},
 		nil,
 		&FalseLiteral{tok: token{tokenType: FALSE, value: "false", pos: 9, col: 9}},
-	}}}}
+	}}}}}
 	assert.Equal(t, Parse("[true, , false]"), ep5)
 
-	ep6 := &Program{body: []Node{&ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
+	ep6 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
 		&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 1, col: 1}},
 		&FalseLiteral{tok: token{tokenType: FALSE, value: "false", pos: 9, col: 9}},
-	}}}}
+	}}}}}
 	assert.Equal(t, Parse("[true,   false,]"), ep6)
 }
 
@@ -85,13 +85,13 @@ func TestIfStatement(t *testing.T) {
 					col:   4,
 				},
 			},
-			ThenStmt: &TrueLiteral{
+			ThenStmt: &ExpressionStatement{X: &TrueLiteral{
 				tok: token{tokenType: TRUE,
 					value: "true",
 					pos:   11,
 					col:   11,
 				},
-			},
+			}},
 		},
 	},
 	}
@@ -108,20 +108,20 @@ func TestIfStatement(t *testing.T) {
 					col:   4,
 				},
 			},
-			ThenStmt: &TrueLiteral{
+			ThenStmt: &ExpressionStatement{X: &TrueLiteral{
 				tok: token{tokenType: TRUE,
 					value: "true",
 					pos:   7,
 					col:   7,
 				},
-			},
-			ElseStmt: &FalseLiteral{
+			}},
+			ElseStmt: &ExpressionStatement{X: &FalseLiteral{
 				tok: token{tokenType: FALSE,
 					value: "false",
 					pos:   17,
 					col:   17,
 				},
-			},
+			}},
 		},
 	},
 	}
@@ -140,7 +140,7 @@ func TestReturnStatement(t *testing.T) {
 	ep2 := &Program{body: []Node{
 		&ReturnStatement{
 			tok: token{tokenType: RETURN, value: "return"},
-			rval: &FalseLiteral{
+			X: &FalseLiteral{
 				tok: token{tokenType: FALSE,
 					value: "false",
 					pos:   7,
@@ -166,13 +166,13 @@ func TestBlockStatement(t *testing.T) {
 		&BlockStatement{
 			tok: token{tokenType: LBRACE},
 			Body: []Node{
-				&FalseLiteral{
+				&ExpressionStatement{X: &FalseLiteral{
 					tok: token{tokenType: FALSE,
 						value: "false",
 						pos:   2,
 						col:   2,
 					},
-				},
+				}},
 			},
 		},
 	},
@@ -183,21 +183,21 @@ func TestBlockStatement(t *testing.T) {
 		&BlockStatement{
 			tok: token{tokenType: LBRACE},
 			Body: []Node{
-				&TrueLiteral{
+				&ExpressionStatement{X: &TrueLiteral{
 					tok: token{tokenType: TRUE,
 						value: "true",
 						pos:   2,
 						col:   2,
 					},
-				},
-				&FalseLiteral{
+				}},
+				&ExpressionStatement{X: &FalseLiteral{
 					tok: token{tokenType: FALSE,
 						value: "false",
 						pos:   7,
 						col:   0,
 						line:  1,
 					},
-				},
+				}},
 			},
 		},
 	},
@@ -273,4 +273,81 @@ func TestVariableStatement(t *testing.T) {
 	},
 	}
 	assert.Equal(t, Parse("var x = a"), ep3)
+}
+
+func TestDoWhileStatement(t *testing.T) {
+	ep1 := &Program{body: []Node{
+		&DoWhileStatement{
+			tok: token{tokenType: DO, value: "do"},
+			X: &NumericLiteral{
+				tok: token{tokenType: NUMERIC_LITERAL, value: "1", pos: 16, col: 16},
+			},
+			Body: &BlockStatement{
+				tok: token{tokenType: LBRACE, pos: 3, col: 3},
+				Body: []Node{
+					&ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "x", pos: 5, col: 5}}},
+				},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse("do { x } while (1)"), ep1)
+}
+
+func TestWhileStatement(t *testing.T) {
+	ep1 := &Program{body: []Node{
+		&WhileStatement{
+			tok: token{tokenType: WHILE, value: "while"},
+			X: &NumericLiteral{
+				tok: token{tokenType: NUMERIC_LITERAL, value: "1", pos: 7, col: 7},
+			},
+			Body: &BlockStatement{
+				tok: token{tokenType: LBRACE, pos: 10, col: 10},
+				Body: []Node{
+					&ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "x", pos: 12, col: 12}}},
+				},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse("while (1) { x }"), ep1)
+}
+
+func TestForStatement(t *testing.T) {
+	ep1 := &Program{body: []Node{
+		&ForStatement{
+			tok: token{tokenType: FOR, value: "for"},
+			Initializer: &NumericLiteral{
+				tok: token{tokenType: NUMERIC_LITERAL, value: "1", pos: 5, col: 5},
+			},
+			Test: &NumericLiteral{
+				tok: token{tokenType: NUMERIC_LITERAL, value: "2", pos: 7, col: 7},
+			},
+			Update: &NumericLiteral{
+				tok: token{tokenType: NUMERIC_LITERAL, value: "3", pos: 9, col: 9},
+			},
+			Body: &BlockStatement{
+				tok: token{tokenType: LBRACE, pos: 12, col: 12},
+				Body: []Node{
+					&ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "x", pos: 14, col: 14}}},
+				},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse("for (1;2;3) { x }"), ep1)
+
+	ep2 := &Program{body: []Node{
+		&ForStatement{
+			tok: token{tokenType: FOR, value: "for"},
+			Body: &BlockStatement{
+				tok: token{tokenType: LBRACE, pos: 9, col: 9},
+				Body: []Node{
+					&ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "x", pos: 11, col: 11}}},
+				},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse("for (;;) { x }"), ep2)
 }

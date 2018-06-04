@@ -394,7 +394,7 @@ func (this *parser) parseReturnStatement() *ReturnStatement {
 		this.expect(SEMICOLON)
 		return n
 	}
-	n.rval = this.parseExpression()
+	n.X = this.parseExpression()
 	return n
 }
 
@@ -432,6 +432,74 @@ func (this *parser) parseVariableStatement() Node {
 	return n
 }
 
+func (this *parser) parseWhileStatement() Node {
+	tok := this.expect(WHILE)
+	this.expect(LPAREN)
+	expr := this.parseExpression()
+	this.expect(RPAREN)
+	body := this.parseStatement()
+
+	return &WhileStatement{tok: tok, X: expr, Body: body}
+}
+
+func (this *parser) parseDoWhileStatement() Node {
+	tok := this.expect(DO)
+	body := this.parseStatement()
+	this.expect(WHILE)
+	this.expect(LPAREN)
+	expr := this.parseExpression()
+	this.expect(RPAREN)
+
+	return &DoWhileStatement{tok: tok, X: expr, Body: body}
+}
+
+func (this *parser) parseForStatement() Node {
+	tok := this.expect(FOR)
+	this.expect(LPAREN)
+
+	if this.stream.peek().tokenType == VAR {
+		panic("var declaration in for not yet supported")
+	}
+
+	var init Node
+	if this.stream.peek().tokenType != SEMICOLON {
+		init = this.parseExpression()
+	}
+	this.expect(SEMICOLON)
+	var test Node
+	if this.stream.peek().tokenType != SEMICOLON {
+		test = this.parseExpression()
+	}
+	this.expect(SEMICOLON)
+	var update Node
+	if this.stream.peek().tokenType != RPAREN {
+		update = this.parseExpression()
+	}
+	this.expect(RPAREN)
+
+	body := this.parseStatement()
+
+	return &ForStatement{tok: tok, Initializer: init, Test: test, Update: update, Body: body}
+}
+
+func (this *parser) parseIterationStatement() Node {
+	tok := this.stream.peek()
+	switch tok.tokenType {
+	case DO:
+		return this.parseDoWhileStatement()
+	case WHILE:
+		return this.parseWhileStatement()
+	case FOR:
+		return this.parseForStatement()
+	}
+
+	panic("unreachable")
+}
+
+func (this *parser) parseExpressionStatement() Node {
+	return &ExpressionStatement{X: this.parseExpression()}
+}
+
 func (this *parser) parseStatement() Node {
 	tok := this.stream.peek()
 	switch tok.tokenType {
@@ -443,11 +511,17 @@ func (this *parser) parseStatement() Node {
 		return this.parseReturnStatement()
 	case LBRACE:
 		return this.parseBlockStatement()
+	case DO:
+		fallthrough
+	case WHILE:
+		fallthrough
+	case FOR:
+		return this.parseIterationStatement()
 	case SEMICOLON:
 		return &EmptyStatement{tok: this.expect(SEMICOLON)}
 	}
 
-	return this.parseExpression() // ### should be ExpressioNStatement
+	return this.parseExpressionStatement()
 }
 
 func (this *parser) expect(ttype TokenType) token {
@@ -469,10 +543,14 @@ func (this *parser) parseProgram() *Program {
 	return p
 }
 
+const parseDebug = false
+
 func Parse(code string) Node {
 	np := parser{tokenStream{stream: &byteStream{code: code}}}
 	ret := np.parseProgram()
-	log.Printf("%s", recursivelyPrint(ret))
+	if parseDebug {
+		log.Printf("%s", recursivelyPrint(ret))
+	}
 	return ret
 }
 
@@ -495,7 +573,7 @@ func recursivelyPrint(node Node) string {
 			return fmt.Sprintf("If %s then %s", recursivelyPrint(n.ConditionExpr), recursivelyPrint(n.ThenStmt))
 		}
 	case *ReturnStatement:
-		return fmt.Sprintf("Return(%s)", recursivelyPrint(n.rval))
+		return fmt.Sprintf("Return(%s)", recursivelyPrint(n.X))
 	case *BlockStatement:
 		p := "{:\n"
 		for _, c := range n.Body {
@@ -503,6 +581,8 @@ func recursivelyPrint(node Node) string {
 		}
 		p += "}\n"
 		return p
+	case *ExpressionStatement:
+		return fmt.Sprintf("(unused) %s", recursivelyPrint(n.X))
 	case *ArrayLiteral:
 		p := "[:\n"
 		for _, c := range n.vals {
@@ -651,6 +731,12 @@ func recursivelyPrint(node Node) string {
 		return "this"
 	case *NullLiteral:
 		return "null"
+	case *DoWhileStatement:
+		return fmt.Sprintf("do %s while %s", recursivelyPrint(n.Body), recursivelyPrint(n.X))
+	case *WhileStatement:
+		return fmt.Sprintf("while %s %s", recursivelyPrint(n.X), recursivelyPrint(n.Body))
+	case *ForStatement:
+		return fmt.Sprintf("for (%s; %s; %s) %s", recursivelyPrint(n.Initializer), recursivelyPrint(n.Test), recursivelyPrint(n.Update), recursivelyPrint(n.Body))
 	case *VariableStatement:
 		buf := "var "
 		for idx, _ := range n.Vars {

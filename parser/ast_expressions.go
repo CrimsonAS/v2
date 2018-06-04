@@ -7,6 +7,16 @@ package parser
 // * change left/right into X/Y (more abstract, and we can be consistent then)
 // * Somehow expose token.Pos/token.Token like Go does?
 
+type ExpressionStatement struct {
+       Node
+       tok token
+       X   Node
+}
+
+func (this *ExpressionStatement) token() token {
+       return this.tok
+}
+
 type NewExpression struct {
 	Node
 	tok  token

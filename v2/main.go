@@ -5,6 +5,7 @@ import (
 	"github.com/CrimsonAS/v2/parser"
 	"github.com/CrimsonAS/v2/vm"
 	"io/ioutil"
+	"log"
 	"os"
 )
 
@@ -19,5 +20,6 @@ func main() {
 	code, _ := ioutil.ReadFile(f)
 	ast := parser.Parse(string(code))
 	vm := vm.NewVM(ast)
-	vm.Run()
+	ret := vm.Run()
+	log.Printf("Code returned %s", ret)
 }

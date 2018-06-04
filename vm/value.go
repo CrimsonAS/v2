@@ -9,6 +9,24 @@ import (
 
 type value_type int
 
+func (this value_type) String() string {
+	switch this {
+	case UNDEFINED:
+		return "UNDEFINED"
+	case NULL:
+		return "NULL"
+	case BOOL:
+		return "BOOL"
+	case NUMBER:
+		return "NUMBER"
+	case STRING:
+		return "STRING"
+	case OBJECT:
+		return "OBJECT"
+	}
+	panic("unreachable")
+}
+
 const (
 	UNDEFINED value_type = iota
 	NULL
@@ -48,17 +66,12 @@ func newString(val string) value {
 	return v
 }
 
-func newObject() value {
-	v := value{OBJECT, nil}
-	return v
-}
-
 func (this value) asUndefined() value {
 	switch this.vtype {
 	case UNDEFINED:
 		return value{}
 	}
-	panic("can't convert!")
+	panic(fmt.Sprintf("can't convert! %s", this.vtype))
 }
 
 func (this value) asNull() value {
@@ -66,7 +79,7 @@ func (this value) asNull() value {
 	case NULL:
 		return newNull()
 	}
-	panic("can't convert!")
+	panic(fmt.Sprintf("can't convert! %s", this.vtype))
 }
 
 func (this value) asBool() bool {
@@ -74,7 +87,7 @@ func (this value) asBool() bool {
 	case BOOL:
 		return *(*bool)(unsafe.Pointer(&this.vdata[0]))
 	}
-	panic("can't convert!")
+	panic(fmt.Sprintf("can't convert! %s", this.vtype))
 }
 
 func (this value) asNumber() float64 {
@@ -82,7 +95,7 @@ func (this value) asNumber() float64 {
 	case NUMBER:
 		return *(*float64)(unsafe.Pointer(&this.vdata[0]))
 	}
-	panic("can't convert!")
+	panic(fmt.Sprintf("can't convert! %s", this.vtype))
 }
 
 func (this value) asString() string {
@@ -90,7 +103,7 @@ func (this value) asString() string {
 	case STRING:
 		return string(this.vdata)
 	}
-	panic("can't convert!")
+	panic(fmt.Sprintf("can't convert! %s", this.vtype))
 }
 
 /*
@@ -210,25 +223,13 @@ func (this value) toString() string {
 	case STRING:
 		return this.asString()
 	case OBJECT:
-		v := this.toPrimitive()
-		return v.toString()
+		// not according to ES spec...
+		return "[object]"
+		//v := this.toPrimitive()
+		//return v.toString()
 	}
 
 	panic("unreachable")
-}
-
-func (this value) toObject() value {
-	switch this.vtype {
-	case UNDEFINED:
-		panic("TypeError")
-	case NULL:
-		panic("TypeError")
-	case BOOL:
-	case NUMBER:
-	case STRING:
-	case OBJECT:
-	}
-	panic("toObject() not implemented (es5 9.9)")
 }
 
 func (this value) String() string {

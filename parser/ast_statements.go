@@ -26,12 +26,8 @@ func (this *IfStatement) token() token {
 
 type ReturnStatement struct {
 	Node
-	rval Node
-	tok  token
-}
-
-func (this *ReturnStatement) ReturnValue() Node {
-	return this.rval
+	X   Node
+	tok token
 }
 
 func (this *ReturnStatement) token() token {
@@ -68,5 +64,40 @@ type VariableStatement struct {
 }
 
 func (this *VariableStatement) token() token {
+	return this.tok
+}
+
+type DoWhileStatement struct {
+	Vars []*IdentifierLiteral
+	X    Node
+	Body Node // ### Statement
+	tok  token
+}
+
+func (this *DoWhileStatement) token() token {
+	return this.tok
+}
+
+type WhileStatement struct {
+	Vars []*IdentifierLiteral
+	X    Node
+	Body Node // ### Statement
+	tok  token
+}
+
+func (this *WhileStatement) token() token {
+	return this.tok
+}
+
+type ForStatement struct {
+	Vars        []*IdentifierLiteral
+	Initializer Node
+	Test        Node
+	Body        Node // ### Statement
+	Update      Node
+	tok         token
+}
+
+func (this *ForStatement) token() token {
 	return this.tok
 }

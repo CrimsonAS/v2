@@ -22,12 +22,6 @@ const (
 	// !a
 	UNOT
 
-	// ++a
-	INCREMENT
-
-	// --a
-	DECREMENT
-
 	// a - b
 	MINUS
 
@@ -70,6 +64,21 @@ const (
 
 	// store var
 	STORE
+
+	LESS_THAN
+	GREATER_THAN
+	EQUALS
+	NOT_EQUALS
+	LESS_THAN_EQ
+
+	INCREMENT // a++
+	DECREMENT // a--
+
+	// discard item from the stack
+	POP
+
+	// duplicate the top of the stack
+	DUP
 )
 
 // 'odata' is a piece of information attached to an opcode. It can be nothing,
@@ -113,16 +122,30 @@ func (this opcode) String() string {
 		return "UMINUS"
 	case UNOT:
 		return "UNOT"
-	case INCREMENT:
-		return "INCREMENT"
-	case DECREMENT:
-		return "DECREMENT"
 	case MINUS:
 		return "SUB"
 	case MULTIPLY:
 		return "MUL"
 	case DIVIDE:
 		return "DIV"
+	case DUP:
+		return "DUP"
+	case POP:
+		return "POP"
+	case INCREMENT:
+		return "INCREMENT"
+	case DECREMENT:
+		return "DECREMENT"
+	case LESS_THAN:
+		return "<"
+	case LESS_THAN_EQ:
+		return "<="
+	case GREATER_THAN:
+		return "<"
+	case EQUALS:
+		return "=="
+	case NOT_EQUALS:
+		return "!="
 	case PUSH_NUMBER:
 		return fmt.Sprintf("PUSH number(%f)", this.odata)
 	case PUSH_STRING:
@@ -177,19 +200,32 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		for _, n := range this.funcsToDefine {
 			// ### push and pop stack frames here? need to cooperate with
 			// runtime somehow
-			//if _, ok := this.currentFrame.vars[n.Identifier.String()]; ok {
-			//	panic(fmt.Sprintf("Already defined function %s", n.Identifier.String()))
-			//} else {
-			this.currentFrame.vars[n.Identifier.String()] = newNumber(float64(len(codebuf)))
-			//}
+			runBuiltin := func(vm *vm, f value, args []value) value {
+				if codegenDebug {
+					log.Printf("Calling func! IP %d going to %d", vm.ip, this.ip+1)
+				}
+				// alter the IP of the new stack frame the CALL set up to be in
+				// the function's code. this.ip points at the CALL.
+				vm.ip += this.ip
+
+				// bit of a dirty hack here. we tell the VM to ignore the return
+				// value of the builtin function, and instead, wait for the
+				// return instruction to pop the stack.
+				vm.ignoreReturn = true
+				return newUndefined()
+			}
+			callFn := newFunctionObject(runBuiltin)
 
 			codebuf = append(codebuf, this.newOpcode(IN_FUNCTION, float64(len(this.stringtable))))
-			this.stringtable = append(this.stringtable, n.Identifier.String())
+			this.defineVar(n.Identifier.String(), callFn)
 			codebuf = append(codebuf, this.generateCode(n.Body)...)
 			codebuf = append(codebuf, this.simpleOp(RETURN))
 		}
 		return codebuf
-
+	case *parser.ExpressionStatement:
+		codebuf = append(codebuf, this.generateCode(n.X)...)
+		// this seems to break tests... but why?
+		//codebuf = append(codebuf, this.simpleOp(POP))
 		return codebuf
 	case *parser.FunctionExpression:
 		this.funcsToDefine = append(this.funcsToDefine, n)
@@ -219,21 +255,52 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		if n.IsPrefix() {
 			codebuf = append(codebuf, this.generateCode(n.X)...)
 			switch n.Operator() {
-			case parser.INCREMENT:
-				codebuf = append(codebuf, this.simpleOp(INCREMENT))
-			case parser.DECREMENT:
-				codebuf = append(codebuf, this.simpleOp(DECREMENT))
 			case parser.PLUS:
 				codebuf = append(codebuf, this.simpleOp(UPLUS))
 			case parser.MINUS:
 				codebuf = append(codebuf, this.simpleOp(UMINUS))
 			case parser.LOGICAL_NOT:
 				codebuf = append(codebuf, this.simpleOp(UNOT))
+
+			// See the comment for postfix INCREMENT/DECREMENT.
+			case parser.INCREMENT:
+				lhs := n.X.(*parser.IdentifierLiteral)
+				varIdx := float64(len(this.stringtable))
+				this.stringtable = append(this.stringtable, lhs.String())
+				codebuf = append(codebuf, this.generateCode(n.X)...)
+				codebuf = append(codebuf, this.simpleOp(INCREMENT))
+				codebuf = append(codebuf, this.simpleOp(DUP))
+				codebuf = append(codebuf, this.newOpcode(STORE, varIdx))
+			case parser.DECREMENT:
+				lhs := n.X.(*parser.IdentifierLiteral)
+				varIdx := float64(len(this.stringtable))
+				this.stringtable = append(this.stringtable, lhs.String())
+				codebuf = append(codebuf, this.generateCode(n.X)...)
+				codebuf = append(codebuf, this.simpleOp(DECREMENT))
+				codebuf = append(codebuf, this.simpleOp(DUP))
+				codebuf = append(codebuf, this.newOpcode(STORE, varIdx))
 			default:
 				panic(fmt.Sprintf("unknown prefix unary operator %s", n.Operator()))
 			}
 		} else {
+			lhs := n.X.(*parser.IdentifierLiteral)
+			varIdx := float64(len(this.stringtable))
+			this.stringtable = append(this.stringtable, lhs.String())
+
+			// These are pretty ugly.
+			// The DUP is needed so that subsequent assignment operations can
+			// pop the original value, but that's pretty disgusting.
 			switch n.Operator() {
+			case parser.INCREMENT:
+				codebuf = append(codebuf, this.generateCode(n.X)...)
+				codebuf = append(codebuf, this.simpleOp(DUP))
+				codebuf = append(codebuf, this.simpleOp(INCREMENT))
+				codebuf = append(codebuf, this.newOpcode(STORE, varIdx))
+			case parser.DECREMENT:
+				codebuf = append(codebuf, this.generateCode(n.X)...)
+				codebuf = append(codebuf, this.simpleOp(DUP))
+				codebuf = append(codebuf, this.simpleOp(DECREMENT))
+				codebuf = append(codebuf, this.newOpcode(STORE, varIdx))
 			default:
 				panic(fmt.Sprintf("unknown postfix unary operator %s", n.Operator()))
 			}
@@ -261,20 +328,89 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 			codebuf = append(codebuf, this.generateCode(n.Left)...)
 			codebuf = append(codebuf, this.simpleOp(DIVIDE))
 			return codebuf
+		case parser.LESS_THAN:
+			codebuf = append(codebuf, this.generateCode(n.Right)...)
+			codebuf = append(codebuf, this.generateCode(n.Left)...)
+			codebuf = append(codebuf, this.simpleOp(LESS_THAN))
+			return codebuf
+		case parser.GREATER_THAN:
+			codebuf = append(codebuf, this.generateCode(n.Right)...)
+			codebuf = append(codebuf, this.generateCode(n.Left)...)
+			codebuf = append(codebuf, this.simpleOp(GREATER_THAN))
+			return codebuf
+		case parser.EQUALS:
+			codebuf = append(codebuf, this.generateCode(n.Right)...)
+			codebuf = append(codebuf, this.generateCode(n.Left)...)
+			codebuf = append(codebuf, this.simpleOp(EQUALS))
+			return codebuf
+		case parser.NOT_EQUALS:
+			codebuf = append(codebuf, this.generateCode(n.Right)...)
+			codebuf = append(codebuf, this.generateCode(n.Left)...)
+			codebuf = append(codebuf, this.simpleOp(NOT_EQUALS))
+			return codebuf
+		case parser.LESS_EQ:
+			codebuf = append(codebuf, this.generateCode(n.Right)...)
+			codebuf = append(codebuf, this.generateCode(n.Left)...)
+			codebuf = append(codebuf, this.simpleOp(LESS_THAN_EQ))
+			return codebuf
 		case parser.ASSIGNMENT:
-			log.Printf("%+v", n.Right)
 			lhs := n.Left.(*parser.IdentifierLiteral)
 			codebuf = append(codebuf, this.generateCode(n.Right)...)
 			varIdx := float64(len(this.stringtable))
 			this.stringtable = append(this.stringtable, lhs.String())
+			codebuf = append(codebuf, this.simpleOp(DUP)) // duplicate so it's available as a return value too...
 			codebuf = append(codebuf, this.newOpcode(STORE, varIdx))
-			// LOAD to return... is this right? should STORE push()? is there
-			// another way altogether?
-			codebuf = append(codebuf, this.newOpcode(LOAD, varIdx))
 			return codebuf
 		default:
 			panic(fmt.Sprintf("unknown operator %s", n.Operator()))
 		}
+	case *parser.ReturnStatement:
+		if n.X != nil {
+			codebuf = append(codebuf, this.generateCode(n.X)...)
+		} else {
+			panic("should LOAD(undefined)")
+		}
+		codebuf = append(codebuf, this.simpleOp(RETURN))
+		return codebuf
+	case *parser.ForStatement:
+		// for (init; test; update) { body }
+		if n.Initializer != nil {
+			codebuf = append(codebuf, this.generateCode(n.Initializer)...) // init
+		}
+		test := []opcode{}
+		update := []opcode{}
+		if n.Test != nil {
+			test = this.generateCode(n.Test)
+		}
+		if n.Update != nil {
+			update = this.generateCode(n.Update)
+		}
+		body := this.generateCode(n.Body)
+		codebuf = append(codebuf, test...)
+		codebuf = append(codebuf, this.newOpcode(JNE, float64(len(update)+len(body)+1))) // jump over the update, body and JMP
+		codebuf = append(codebuf, body...)
+		codebuf = append(codebuf, update...)
+		codebuf = append(codebuf, this.newOpcode(JMP, float64(-(len(body)+len(update)+len(test)+2)))) // back to the test start
+		return codebuf
+	case *parser.DoWhileStatement:
+		codebuf = append(codebuf, this.generateCode(n.Body)...)                    // do { n.Body }
+		codebuf = append(codebuf, this.generateCode(n.X)...)                       // while (X)
+		codebuf = append(codebuf, this.newOpcode(JNE, float64(1)))                 // jump over the following JMP
+		codebuf = append(codebuf, this.newOpcode(JMP, float64(-(len(codebuf)+1)))) // back to the trueBranch start
+		return codebuf
+	case *parser.WhileStatement:
+		test := this.generateCode(n.X)
+
+		trueBranch := this.generateCode(n.Body)
+		codebuf = append(codebuf, test...)
+		// if (!test) -> skip trueBranch
+		// the '1's here are for the instructions we're inserting ourselves
+		// (JMP/JNE)
+		codebuf = append(codebuf, this.newOpcode(JNE, float64(len(trueBranch)+1)))
+		codebuf = append(codebuf, trueBranch...)
+		// jmp back to the test
+		codebuf = append(codebuf, this.newOpcode(JMP, float64(-(len(codebuf)+1))))
+		return codebuf
 	case *parser.IfStatement:
 		test := this.generateCode(n.ConditionExpr)
 		trueBranch := this.generateCode(n.ThenStmt)
@@ -283,11 +419,7 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 			falseBranch = this.generateCode(n.ElseStmt)
 		}
 		codebuf = append(codebuf, test...)
-		// jump past the true branch, and the JNE
-		// ### note that these are relative (no use of global code position), but
-		// the VM treats them as absolute. one of these two will need to be
-		// fixed, or JNE in functions will break.
-		codebuf = append(codebuf, this.newOpcode(JNE, float64(len(test)+len(trueBranch)+1)))
+		codebuf = append(codebuf, this.newOpcode(JNE, float64(len(trueBranch))))
 		codebuf = append(codebuf, trueBranch...)
 		codebuf = append(codebuf, falseBranch...)
 		return codebuf
@@ -319,5 +451,5 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		panic(fmt.Sprintf("unknown node %T", node))
 	}
 
-	panic("unreachable")
+	panic(fmt.Sprintf("unreachable %T", node))
 }

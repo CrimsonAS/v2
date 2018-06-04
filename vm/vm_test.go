@@ -31,6 +31,38 @@ func TestStrings(t *testing.T) {
 		t.Logf("Passed %s == %s", test.in, test.out)
 	}
 }
+func TestPostfixOperators(t *testing.T) {
+	type simpleTest struct {
+		in  string
+		out value
+	}
+
+	tests := []simpleTest{
+		simpleTest{
+			in:  "var a = 0; a++",
+			out: newNumber(0),
+		},
+		simpleTest{
+			in:  "var a = 1; a--",
+			out: newNumber(1),
+		},
+		simpleTest{
+			in:  "var a = 0; var b = 1; a = b++; a",
+			out: newNumber(1),
+		},
+		simpleTest{
+			in:  "var a = 0; var b = 1; a = b++; b",
+			out: newNumber(2),
+		},
+	}
+	for _, test := range tests {
+		t.Logf("Running %s", test.in)
+		ast := parser.Parse(test.in)
+		vm := NewVM(ast)
+		assert.Equal(t, vm.Run(), test.out)
+		t.Logf("Passed %s == %s", test.in, test.out)
+	}
+}
 
 func TestPrefixOperators(t *testing.T) {
 	type simpleTest struct {
@@ -40,12 +72,12 @@ func TestPrefixOperators(t *testing.T) {
 
 	tests := []simpleTest{
 		simpleTest{
-			in:  "++1",
-			out: newNumber(2),
+			in:  "var a = 0; ++a",
+			out: newNumber(1),
 		},
 		simpleTest{
-			in:  "--1",
-			out: newNumber(0),
+			in:  "var a = 0; --a",
+			out: newNumber(-1),
 		},
 		simpleTest{
 			in:  "!false",
@@ -73,6 +105,7 @@ func TestPrefixOperators(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		t.Logf("%s", test.in)
 		ast := parser.Parse(test.in)
 		vm := NewVM(ast)
 		assert.Equal(t, vm.Run(), test.out)
@@ -119,18 +152,54 @@ func TestSimple(t *testing.T) {
 			in:  "if (true) { 10/2 }",
 			out: newNumber(5),
 		},
-
-		// order of operations is broken.
-		// something wrong with unary expressions?
 		simpleTest{
 			in:  "2+2*2+2",
 			out: newNumber(8),
+		},
+		simpleTest{
+			in:  "1<2",
+			out: newBool(true),
+		},
+		simpleTest{
+			in:  "1<=2",
+			out: newBool(true),
+		},
+		simpleTest{
+			in:  "2<=1",
+			out: newBool(false),
+		},
+		simpleTest{
+			in:  "2<1",
+			out: newBool(false),
+		},
+		simpleTest{
+			in:  "2>1",
+			out: newBool(true),
+		},
+		simpleTest{
+			in:  "1>2",
+			out: newBool(false),
+		},
+		simpleTest{
+			in:  "1==2",
+			out: newBool(false),
+		},
+		simpleTest{
+			in:  "1==1",
+			out: newBool(true),
+		},
+		simpleTest{
+			in:  "1!=2",
+			out: newBool(true),
+		},
+		simpleTest{
+			in:  "1!=1",
+			out: newBool(false),
 		},
 	}
 
 	for _, test := range tests {
 		ast := parser.Parse(test.in)
-		//t.Logf("Code %s\n%# v", test.in, pretty.Formatter(ast))
 		vm := NewVM(ast)
 		assert.Equal(t, vm.Run(), test.out)
 		t.Logf("Passed %s == %s", test.in, test.out)
@@ -181,4 +250,113 @@ func TestVar(t *testing.T) {
 		assert.Equal(t, vm.Run(), test.out)
 		t.Logf("Passed %s == %s", test.in, test.out)
 	}
+}
+
+func TestWhile(t *testing.T) {
+	type simpleTest struct {
+		in  string
+		out value
+	}
+
+	tests := []simpleTest{
+		simpleTest{
+			in:  "var a = 0; while (a > 10) a = a + 1; a",
+			out: newNumber(0),
+		},
+		simpleTest{
+			in:  "var a = 0; while (a < 10) a = a + 1; a",
+			out: newNumber(10),
+		},
+	}
+
+	for _, test := range tests {
+		ast := parser.Parse(test.in)
+		vm := NewVM(ast)
+		assert.Equal(t, vm.Run(), test.out)
+		t.Logf("Passed %s == %s", test.in, test.out)
+	}
+}
+
+func TestDoWhile(t *testing.T) {
+	type simpleTest struct {
+		in  string
+		out value
+	}
+
+	tests := []simpleTest{
+		simpleTest{
+			in:  "var a = 0; do { a = a + 1 } while (a > 10); a",
+			out: newNumber(1),
+		},
+		simpleTest{
+			in:  "var a = 0; do { a = a + 1 } while (a < 5); a",
+			out: newNumber(5),
+		},
+	}
+
+	for _, test := range tests {
+		ast := parser.Parse(test.in)
+		vm := NewVM(ast)
+		assert.Equal(t, vm.Run(), test.out)
+		t.Logf("Passed %s == %s", test.in, test.out)
+	}
+}
+
+func TestForStatement(t *testing.T) {
+	type simpleTest struct {
+		in  string
+		out value
+	}
+
+	tests := []simpleTest{
+		simpleTest{
+			in:  "var a = 0; for (a = 0; a < 5; a = a + 1) { }; a",
+			out: newNumber(5),
+		},
+		simpleTest{
+			in:  "var a = 10; for (; a < 5; a = a + 1) { }; a",
+			out: newNumber(10),
+		},
+	}
+
+	for _, test := range tests {
+		ast := parser.Parse(test.in)
+		vm := NewVM(ast)
+		assert.Equal(t, vm.Run(), test.out)
+		t.Logf("Passed %s == %s", test.in, test.out)
+	}
+}
+
+func TestReturnStatement(t *testing.T) {
+	type simpleTest struct {
+		in  string
+		out value
+	}
+
+	tests := []simpleTest{
+		simpleTest{
+			in:  "function f() { return 10; } var a; a = f();",
+			out: newNumber(10),
+		},
+	}
+
+	for _, test := range tests {
+		ast := parser.Parse(test.in)
+		vm := NewVM(ast)
+		assert.Equal(t, vm.Run(), test.out)
+		t.Logf("Passed %s == %s", test.in, test.out)
+	}
+}
+
+func TestBuiltin(t *testing.T) {
+	testFunc := func(vm *vm, f value, args []value) value {
+		t.Logf("I'm a message from a builtin function: %+v", args)
+		return newString("Hello world")
+	}
+
+	ast := parser.Parse("testFunc()")
+	vm := NewVM(ast)
+	pf := newFunctionObject(testFunc)
+	vm.defineVar("testFunc", pf)
+	assert.Equal(t, vm.Run(), newString("Hello world"))
 }

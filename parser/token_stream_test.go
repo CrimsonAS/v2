@@ -645,6 +645,33 @@ func TestTokens(t *testing.T) {
 				},
 			},
 		},
+		tokenStreamTest{
+			input: "do",
+			output: []token{
+				token{
+					tokenType: DO,
+					value:     "do",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "while",
+			output: []token{
+				token{
+					tokenType: WHILE,
+					value:     "while",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "for",
+			output: []token{
+				token{
+					tokenType: FOR,
+					value:     "for",
+				},
+			},
+		},
 	}
 	runTokenStreamTests(t, tests)
 }

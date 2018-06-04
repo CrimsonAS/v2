@@ -11,8 +11,12 @@ type stack struct {
 	values []value
 }
 
+const stackDebug = false
+
 func (this *stack) push(v value) {
-	//log.Printf("Pushing %s onto stack", v)
+	if stackDebug {
+		log.Printf("Pushing %s onto stack", v)
+	}
 	this.values = append(this.values, v)
 }
 
@@ -22,7 +26,9 @@ func (this *stack) peek() value {
 
 func (this *stack) pop() value {
 	v := this.peek()
-	//log.Printf("Popping %s from stack", v)
+	if stackDebug {
+		log.Printf("Popping %s from stack", v)
+	}
 	this.values = this.values[:len(this.values)-1]
 	return v
 }
@@ -40,34 +46,78 @@ type vm struct {
 	ip            int
 	funcsToDefine []*parser.FunctionExpression
 	stringtable   []string
+	returnValue   value
+	ignoreReturn  bool
 }
 
-func makeStackFrame() stackFrame {
-	return stackFrame{vars: make(map[string]value)}
+func (this *vm) defineVar(name string, v value) {
+	this.currentFrame.vars[name] = v
+	this.stringtable = append(this.stringtable, name)
+}
+
+func makeStackFrame(returnAddr int) stackFrame {
+	return stackFrame{vars: make(map[string]value), retAddr: returnAddr}
 }
 
 func NewVM(ast parser.Node) *vm {
-	vm := vm{[]stackFrame{}, nil, []opcode{}, 0, nil, nil}
-	vm.stack = []stackFrame{makeStackFrame()}
+	vm := vm{[]stackFrame{}, nil, []opcode{}, 0, nil, nil, value{}, false}
+	vm.stack = []stackFrame{makeStackFrame(0)}
 	vm.currentFrame = &vm.stack[0]
 	vm.code = vm.generateCode(ast)
+
 	return &vm
 }
 
-func (this *vm) Run() value {
-	log.Printf("String table:")
-	for i := 0; i < len(this.stringtable); i++ {
-		log.Printf("%d: %s", i, this.stringtable[i])
-	}
-	log.Printf("Program:")
-	for i := 0; i < len(this.code); i++ {
-		log.Printf("%d: %s", i, this.code[i])
-	}
-	log.Printf("Starting execution")
+const codegenDebug = false
+const execDebug = false
 
-	for ; this.ip < len(this.code); this.ip++ {
+func (this *vm) pushStack(sf stackFrame) {
+	this.stack = append(this.stack, sf)
+	this.currentFrame = &this.stack[len(this.stack)-1]
+
+	if execDebug {
+		log.Printf("Pushed stack. Stack now: %+v", this.stack)
+	}
+}
+
+func (this *vm) popStack(rval value) {
+	this.stack = this.stack[:len(this.stack)-1]
+
+	if len(this.stack) > 0 {
+		this.ip = this.currentFrame.retAddr
+		this.currentFrame = &this.stack[len(this.stack)-1]
+		this.currentFrame.data_stack.push(rval)
+		if execDebug {
+			log.Printf("Returning %s up the stack", rval)
+			log.Printf("Stack now: %+v", this.stack)
+		}
+	} else {
+		this.returnValue = rval
+		if execDebug {
+			log.Printf("Returning %s from Run()", rval)
+		}
+
+	}
+}
+
+func (this *vm) Run() value {
+	if codegenDebug {
+		log.Printf("String table:")
+		for i := 0; i < len(this.stringtable); i++ {
+			log.Printf("%d: %s", i, this.stringtable[i])
+		}
+		log.Printf("Program:")
+		for i := 0; i < len(this.code); i++ {
+			log.Printf("%d: %s", i, this.code[i])
+		}
+		log.Printf("Starting execution")
+	}
+
+	for ; len(this.stack) > 0 && this.ip < len(this.code); this.ip++ {
 		op := this.code[this.ip]
-		log.Printf("Op %d: %s", this.ip, op)
+		if execDebug {
+			log.Printf("Op %d: %s", this.ip, op)
+		}
 		switch op.otype {
 		case PUSH_BOOL:
 			b := false
@@ -99,15 +149,11 @@ func (this *vm) Run() value {
 				this.currentFrame.data_stack.push(newBool(true))
 			}
 		case INCREMENT:
-			// ### incomplete (es5 11.4.4)
-			val := this.currentFrame.data_stack.pop()
-			oldValue := val.toNumber()
-			this.currentFrame.data_stack.push(newNumber(oldValue + 1))
+			v := this.currentFrame.data_stack.pop()
+			this.currentFrame.data_stack.push(newNumber(v.toNumber() + 1))
 		case DECREMENT:
-			// ### incomplete (es5 11.4.4)
-			val := this.currentFrame.data_stack.pop()
-			oldValue := val.toNumber()
-			this.currentFrame.data_stack.push(newNumber(oldValue - 1))
+			v := this.currentFrame.data_stack.pop()
+			this.currentFrame.data_stack.push(newNumber(v.toNumber() - 1))
 		case PLUS:
 			// ### could (should) specialize this in codegen for numeric types
 			// vs unknown types?
@@ -132,62 +178,99 @@ func (this *vm) Run() value {
 			lval := this.currentFrame.data_stack.pop()
 			rval := this.currentFrame.data_stack.pop()
 			this.currentFrame.data_stack.push(newNumber(lval.toNumber() / rval.toNumber()))
+		case LESS_THAN:
+			lval := this.currentFrame.data_stack.pop()
+			rval := this.currentFrame.data_stack.pop()
+			this.currentFrame.data_stack.push(newBool(lval.toNumber() < rval.toNumber()))
+		case GREATER_THAN:
+			lval := this.currentFrame.data_stack.pop()
+			rval := this.currentFrame.data_stack.pop()
+			this.currentFrame.data_stack.push(newBool(lval.toNumber() > rval.toNumber()))
+		case EQUALS:
+			lval := this.currentFrame.data_stack.pop()
+			rval := this.currentFrame.data_stack.pop()
+			this.currentFrame.data_stack.push(newBool(lval.toNumber() == rval.toNumber()))
+		case NOT_EQUALS:
+			lval := this.currentFrame.data_stack.pop()
+			rval := this.currentFrame.data_stack.pop()
+			this.currentFrame.data_stack.push(newBool(lval.toNumber() != rval.toNumber()))
+		case LESS_THAN_EQ:
+			lval := this.currentFrame.data_stack.pop()
+			rval := this.currentFrame.data_stack.pop()
+			this.currentFrame.data_stack.push(newBool(lval.toNumber() <= rval.toNumber()))
 		case JMP:
-			this.ip = op.odata.asInt()
+			this.ip += op.odata.asInt()
 		case JNE:
 			test := this.currentFrame.data_stack.pop()
 
+			if op.odata.asInt() == 0 {
+				panic("JNE 0 is an infinite loop")
+			}
 			if !test.toBoolean() {
-				this.ip = op.odata.asInt()
+				if execDebug {
+					log.Printf("IP is at %d jump rel %d code length %d", this.ip, op.odata.asInt(), len(this.code))
+				}
+				this.ip += op.odata.asInt()
+
+				if this.ip >= len(this.code) {
+					panic("JNE blew over opcode length")
+				}
 			}
 		case CALL:
 			fn := this.currentFrame.data_stack.pop()
-			log.Printf("CALL %s", fn)
-			// ### hack: don't store functions as an address, haha.
-			this.ip = int(fn.toNumber())
-			sf := makeStackFrame()
-			sf.retAddr = this.ip + 1
-			this.stack = append(this.stack, sf)
-			this.currentFrame = &this.stack[len(this.stack)-1]
-			log.Printf("Stack now: %+v", this.stack)
-		case RETURN:
-			log.Printf("Returning from stack: %+v", this.stack)
-			this.stack = this.stack[:len(this.stack)-1]
+			if fn.vtype != OBJECT {
+				panic(fmt.Sprintf("CALL without a function: %s", fn))
+			}
+			sf := makeStackFrame(this.ip)
+			this.pushStack(sf)
 
+			rval := fn.call(this, []value{})
+
+			if this.ignoreReturn {
+				this.ignoreReturn = false
+			} else {
+				this.popStack(rval)
+			}
+		case RETURN:
+			// can't inline this to popStack, because the builtin case doesn't
+			// have a value pushed onto the data_stack.
 			rval := value{}
 			if len(this.currentFrame.data_stack.values) > 0 {
-				log.Printf("Returning %s\n", this.currentFrame.data_stack.peek())
 				rval = this.currentFrame.data_stack.pop()
 			}
 
-			if len(this.stack) > 0 {
-				this.ip = this.currentFrame.retAddr
-				this.currentFrame = &this.stack[len(this.stack)-1]
-				this.currentFrame.data_stack.push(rval)
-			} else {
-				// return from main
-				return rval
+			this.popStack(rval)
+		case DUP:
+			cv := this.currentFrame.data_stack.peek()
+			this.currentFrame.data_stack.push(cv)
+		case POP:
+			if len(this.currentFrame.data_stack.values) > 0 {
+				this.currentFrame.data_stack.pop()
 			}
-
-			log.Printf("Stack now: %+v", this.stack)
 		case IN_FUNCTION:
 			// no-op, just for informative/debug purposes
 		case DECLARE:
 			// ### ensure it doesn't exist
-			log.Printf("Var %s declared (%d)", this.stringtable[op.odata.asInt()], op.odata.asInt())
+			if execDebug {
+				log.Printf("Var %s declared (%d)", this.stringtable[op.odata.asInt()], op.odata.asInt())
+			}
 			this.currentFrame.vars[this.stringtable[op.odata.asInt()]] = value{}
 		case STORE:
 			v := this.currentFrame.data_stack.pop()
-			log.Printf("Storing %s in %s (%d)", v, this.stringtable[op.odata.asInt()], op.odata.asInt())
+			if execDebug {
+				log.Printf("Storing %s in %s (%d)", v, this.stringtable[op.odata.asInt()], op.odata.asInt())
+			}
 			this.currentFrame.vars[this.stringtable[op.odata.asInt()]] = v
 		case LOAD:
 			v := this.currentFrame.vars[this.stringtable[op.odata.asInt()]]
-			log.Printf("Loading %s from %d gave %s", this.stringtable[op.odata.asInt()], op.odata.asInt(), v)
+			if execDebug {
+				log.Printf("Loading %s from %d gave %s", this.stringtable[op.odata.asInt()], op.odata.asInt(), v)
+			}
 			this.currentFrame.data_stack.push(v)
 		default:
 			panic(fmt.Sprintf("unhandled opcode %+v", op))
 		}
 	}
 
-	panic("unreachable")
+	return this.returnValue
 }

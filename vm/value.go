@@ -39,6 +39,8 @@ const (
 type value struct {
 	vtype value_type
 	vdata []byte // horrible un-type-safe voodoo
+	fptr  foFn
+	odata *objectData
 }
 
 func newUndefined() value {
@@ -46,30 +48,30 @@ func newUndefined() value {
 }
 
 func newNull() value {
-	return value{UNDEFINED, nil}
+	return value{NULL, nil, nil, &objectData{}}
 }
 
 func newBool(b bool) value {
-	v := value{BOOL, make([]byte, 8)}
+	v := value{BOOL, make([]byte, unsafe.Sizeof(b)), nil, &objectData{}}
 	*(*bool)(unsafe.Pointer(&v.vdata[0])) = b
 	return v
 }
 
 func newNumber(val float64) value {
-	v := value{NUMBER, make([]byte, 8)}
+	v := value{NUMBER, make([]byte, unsafe.Sizeof(val)), nil, &objectData{}}
 	*(*float64)(unsafe.Pointer(&v.vdata[0])) = val
 	return v
 }
 
 func newString(val string) value {
-	v := value{STRING, []byte(val)}
+	v := value{STRING, []byte(val), nil, &objectData{}}
 	return v
 }
 
 func (this value) asUndefined() value {
 	switch this.vtype {
 	case UNDEFINED:
-		return value{}
+		return newUndefined()
 	}
 	panic(fmt.Sprintf("can't convert! %s", this.vtype))
 }

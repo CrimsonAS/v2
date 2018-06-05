@@ -10,11 +10,11 @@ import (
 func TestFunctionExpression(t *testing.T) {
 	ep1 := &Program{body: []Node{&BinaryExpression{
 		tok:  token{tokenType: ASSIGNMENT, value: "", col: 2, pos: 2},
-               Left: &ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}},
+		Left: &ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}},
 		Right: &FunctionExpression{tok: token{tokenType: FUNCTION, value: "function", col: 4, pos: 4},
 			Body: &BlockStatement{
 				tok:  token{tokenType: LBRACE, col: 15, pos: 15},
-                               Body: []Node{&ExpressionStatement{X: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", col: 17, pos: 17}}}},
+				Body: []Node{&ExpressionStatement{X: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", col: 17, pos: 17}}}},
 			},
 		},
 	}}}
@@ -24,12 +24,12 @@ func TestFunctionExpression(t *testing.T) {
 
 	ep2 := &Program{body: []Node{&BinaryExpression{
 		tok:  token{tokenType: ASSIGNMENT, value: "", col: 2, pos: 2},
-               Left: &ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}},
+		Left: &ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}},
 		Right: &FunctionExpression{tok: token{tokenType: FUNCTION, value: "function", col: 4, pos: 4},
 			Parameters: []*IdentifierLiteral{&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b"}}},
 			Body: &BlockStatement{
 				tok:  token{tokenType: LBRACE, col: 15, pos: 15},
-                               Body: []Node{&ExpressionStatement{X: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", col: 17, pos: 17}}}},
+				Body: []Node{&ExpressionStatement{X: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", col: 17, pos: 17}}}},
 			},
 		},
 	}}}
@@ -39,7 +39,7 @@ func TestFunctionExpression(t *testing.T) {
 
 	ep3 := &Program{body: []Node{&BinaryExpression{
 		tok:  token{tokenType: ASSIGNMENT, value: "", col: 2, pos: 2},
-               Left: &ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}},
+		Left: &ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}},
 		Right: &FunctionExpression{tok: token{tokenType: FUNCTION, value: "function", col: 4, pos: 4},
 			Parameters: []*IdentifierLiteral{
 				&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b"}},
@@ -47,7 +47,7 @@ func TestFunctionExpression(t *testing.T) {
 			},
 			Body: &BlockStatement{
 				tok:  token{tokenType: LBRACE, col: 15, pos: 15},
-                               Body: []Node{&ExpressionStatement{X: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", col: 17, pos: 17}}}},
+				Body: []Node{&ExpressionStatement{X: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", col: 17, pos: 17}}}},
 			},
 		},
 	}}}
@@ -57,78 +57,78 @@ func TestFunctionExpression(t *testing.T) {
 }
 
 func TestNewExpression(t *testing.T) {
-       ep1 := &Program{body: []Node{&ExpressionStatement{X: &NewExpression{tok: token{tokenType: NEW, value: ""}, expr: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 4, col: 4}}}}}}
+	ep1 := &Program{body: []Node{&ExpressionStatement{X: &NewExpression{tok: token{tokenType: NEW, value: ""}, expr: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 4, col: 4}}}}}}
 	assert.Equal(t, Parse("new true"), ep1)
 }
 
 func TestCallExpression(t *testing.T) {
-       ep1 := &Program{body: []Node{&ExpressionStatement{X: &CallExpression{
+	ep1 := &Program{body: []Node{&ExpressionStatement{X: &CallExpression{
 		tok:       token{tokenType: LPAREN, value: "", col: 1, pos: 1},
 		X:         &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
 		Arguments: []Node{},
-       }}}}
+	}}}}
 	assert.Equal(t, Parse("a()"), ep1)
 
-       ep2 := &Program{body: []Node{&ExpressionStatement{X: &CallExpression{
+	ep2 := &Program{body: []Node{&ExpressionStatement{X: &CallExpression{
 		tok: token{tokenType: LPAREN, value: "", col: 1, pos: 1},
 		X:   &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
 		Arguments: []Node{
 			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 2, pos: 2}},
 		},
-       }}}}
+	}}}}
 	assert.Equal(t, Parse("a(b)"), ep2)
 
-       ep3 := &Program{body: []Node{&ExpressionStatement{X: &CallExpression{
+	ep3 := &Program{body: []Node{&ExpressionStatement{X: &CallExpression{
 		tok: token{tokenType: LPAREN, value: "", col: 1, pos: 1},
 		X:   &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
 		Arguments: []Node{
 			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 2, pos: 2}},
 			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "c", col: 5, pos: 5}},
 		},
-       }}}}
+	}}}}
 	assert.Equal(t, Parse("a(b, c)"), ep3)
 }
 
 func TestDotMemberExpression(t *testing.T) {
-       ep1 := &Program{body: []Node{&ExpressionStatement{X: &DotMemberExpression{
-		tok:   token{tokenType: DOT, value: "", col: 1, pos: 1},
-		left:  &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
-		right: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 2, pos: 2}}}},
-       }}
+	ep1 := &Program{body: []Node{&ExpressionStatement{X: &DotMemberExpression{
+		tok:  token{tokenType: DOT, value: "", col: 1, pos: 1},
+		X:    &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
+		Name: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 2, pos: 2}}}},
+	}}
 	assert.Equal(t, Parse("a.b"), ep1)
 }
 
 func TestBracketMemberExpression(t *testing.T) {
-       ep1 := &Program{body: []Node{&ExpressionStatement{X: &BracketMemberExpression{
+	ep1 := &Program{body: []Node{&ExpressionStatement{X: &BracketMemberExpression{
 		tok:   token{tokenType: LBRACKET, value: "", col: 1, pos: 1},
 		left:  &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
 		right: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 2, pos: 2}}}},
-       }}
+	}}
 	assert.Equal(t, Parse("a[b]"), ep1)
 }
 
 // ### consider merging with TestUnaryExpression
 func TestPostfixExpression(t *testing.T) {
 	ep1 := &Program{body: []Node{
-               &ExpressionStatement{X: &UnaryExpression{
+		&ExpressionStatement{X: &UnaryExpression{
 			tok:     token{tokenType: INCREMENT, value: "", pos: 1, col: 1},
 			postfix: true,
 			X: &IdentifierLiteral{
 				tok: token{tokenType: IDENTIFIER, value: "i"},
 			},
 		},
-               }}}
+		}}}
 	assert.Equal(t, Parse("i++"), ep1)
 
 	ep2 := &Program{body: []Node{
-               &ExpressionStatement{X: &UnaryExpression{
+		&ExpressionStatement{X: &UnaryExpression{
 			tok:     token{tokenType: DECREMENT, value: "", pos: 1, col: 1},
 			postfix: true,
 			X: &IdentifierLiteral{
 				tok: token{tokenType: IDENTIFIER, value: "i"},
 			},
 		},
-               }}}
+		}}}
 	assert.Equal(t, Parse("i--"), ep2)
 }
 
@@ -200,14 +200,14 @@ func TestUnaryExpression(t *testing.T) {
 
 	for _, test := range tests {
 		ep1 := &Program{body: []Node{
-                       &ExpressionStatement{X: &UnaryExpression{
+			&ExpressionStatement{X: &UnaryExpression{
 				tok:     token{tokenType: test.tokenType, value: "", pos: 0, col: 0},
 				postfix: false,
 				X: &IdentifierLiteral{
 					tok: token{tokenType: IDENTIFIER, value: "i", pos: test.ipos, col: test.icol},
 				},
 			},
-                       }}}
+			}}}
 		assert.Equal(t, Parse(test.tokenString+" i"), ep1)
 		t.Logf("%s", fmt.Sprintf("Passed %s i", test.tokenString))
 	}
@@ -365,7 +365,7 @@ func TestSimpleBinaryExpression(t *testing.T) {
 
 	for _, test := range tests {
 		ep1 := &Program{body: []Node{
-                       &ExpressionStatement{X: &BinaryExpression{
+			&ExpressionStatement{X: &BinaryExpression{
 				tok: token{tokenType: test.tokenType, value: "", pos: 2, col: 2},
 				Left: &IdentifierLiteral{
 					tok: token{tokenType: IDENTIFIER, value: "i"},
@@ -374,7 +374,7 @@ func TestSimpleBinaryExpression(t *testing.T) {
 					tok: token{tokenType: IDENTIFIER, value: "i", pos: test.ipos, col: test.icol},
 				},
 			},
-                       }}}
+			}}}
 		assert.Equal(t, Parse("i "+test.tokenString+" i"), ep1)
 		t.Logf("%s", fmt.Sprintf("Passed i %s i", test.tokenString))
 	}
@@ -382,18 +382,18 @@ func TestSimpleBinaryExpression(t *testing.T) {
 
 func TestConditionalExpression(t *testing.T) {
 	ep1 := &Program{body: []Node{
-               &ExpressionStatement{X: &ConditionalExpression{
+		&ExpressionStatement{X: &ConditionalExpression{
 			tok: token{tokenType: CONDITIONAL, value: "", pos: 1, col: 1},
-			test: &IdentifierLiteral{
+			X: &IdentifierLiteral{
 				tok: token{tokenType: IDENTIFIER, value: "a"},
 			},
-			trueBranch: &IdentifierLiteral{
+			Then: &IdentifierLiteral{
 				tok: token{tokenType: IDENTIFIER, value: "b", pos: 2, col: 2},
 			},
-			falseBranch: &IdentifierLiteral{
+			Else: &IdentifierLiteral{
 				tok: token{tokenType: IDENTIFIER, value: "c", pos: 4, col: 4},
 			},
 		},
-               }}}
+		}}}
 	assert.Equal(t, Parse("a?b:c"), ep1)
 }

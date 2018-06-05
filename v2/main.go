@@ -6,10 +6,16 @@ import (
 	"github.com/CrimsonAS/v2/vm"
 	"io/ioutil"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 )
 
 func main() {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	f := ""
 	if len(os.Args) > 1 {
 		f = os.Args[1]

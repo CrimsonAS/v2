@@ -36,7 +36,20 @@ func (this *stack) pop() value {
 type stackFrame struct {
 	data_stack stack
 	retAddr    int
-	vars       map[string]value
+	vars       map[int]*value
+	outer      *stackFrame
+}
+
+var stringtable []string
+
+func appendStringtable(name string) int {
+	for idx, str := range stringtable {
+		if name == str {
+			return idx
+		}
+	}
+	stringtable = append(stringtable, name)
+	return len(stringtable) - 1
 }
 
 type vm struct {
@@ -45,25 +58,47 @@ type vm struct {
 	code          []opcode
 	ip            int
 	funcsToDefine []*parser.FunctionExpression
-	stringtable   []string
 	returnValue   value
 	ignoreReturn  bool
 }
 
-func (this *vm) defineVar(name string, v value) {
-	this.currentFrame.vars[name] = v
-	this.stringtable = append(this.stringtable, name)
+const lookupDebug = false
+
+func (this *vm) findVar(name int) *value {
+	sf := this.currentFrame
+	for sf != nil {
+		if v, ok := sf.vars[name]; ok {
+			return v
+		}
+		sf = sf.outer
+	}
+	return nil
 }
 
-func makeStackFrame(returnAddr int) stackFrame {
-	return stackFrame{vars: make(map[string]value), retAddr: returnAddr}
+func (this *vm) defineVar(name int, v value) {
+	this.currentFrame.vars[name] = &v
+}
+
+func makeStackFrame(preparedData stack, returnAddr int, outer *stackFrame) stackFrame {
+	return stackFrame{data_stack: preparedData, vars: make(map[int]*value), retAddr: returnAddr, outer: outer}
+}
+
+func logFunc(vm *vm, f value, args []value) value {
+	log.Printf("console.log: %+v", args)
+	return newUndefined()
 }
 
 func NewVM(ast parser.Node) *vm {
-	vm := vm{[]stackFrame{}, nil, []opcode{}, 0, nil, nil, value{}, false}
-	vm.stack = []stackFrame{makeStackFrame(0)}
+	vm := vm{[]stackFrame{}, nil, []opcode{}, 0, nil, value{}, false}
+	vm.stack = []stackFrame{makeStackFrame(stack{}, 0, nil)}
 	vm.currentFrame = &vm.stack[0]
 	vm.code = vm.generateCode(ast)
+
+	consoleO := newObject()
+	vm.defineVar(appendStringtable("console"), consoleO)
+
+	logO := newFunctionObject(logFunc)
+	consoleO.set("log", logO)
 
 	return &vm
 }
@@ -103,8 +138,8 @@ func (this *vm) popStack(rval value) {
 func (this *vm) Run() value {
 	if codegenDebug {
 		log.Printf("String table:")
-		for i := 0; i < len(this.stringtable); i++ {
-			log.Printf("%d: %s", i, this.stringtable[i])
+		for i := 0; i < len(stringtable); i++ {
+			log.Printf("%d: %s", i, stringtable[i])
 		}
 		log.Printf("Program:")
 		for i := 0; i < len(this.code); i++ {
@@ -128,7 +163,7 @@ func (this *vm) Run() value {
 		case PUSH_NUMBER:
 			this.currentFrame.data_stack.push(newNumber(op.odata.asFloat64()))
 		case PUSH_STRING:
-			this.currentFrame.data_stack.push(newString(this.stringtable[op.odata.asInt()]))
+			this.currentFrame.data_stack.push(newString(stringtable[op.odata.asInt()]))
 		case UPLUS:
 			val := this.currentFrame.data_stack.pop()
 			this.currentFrame.data_stack.push(newNumber(val.toNumber()))
@@ -217,14 +252,25 @@ func (this *vm) Run() value {
 				}
 			}
 		case CALL:
+			// my, this is inefficient
+			builtinArgs := []value{}
+			for i := 0; i < op.odata.asInt(); i++ {
+				v := this.currentFrame.data_stack.pop()
+				if execDebug {
+					log.Printf("Loaded arg %d %s", i, v)
+				}
+				builtinArgs = append(builtinArgs, v)
+			}
+
 			fn := this.currentFrame.data_stack.pop()
 			if fn.vtype != OBJECT {
 				panic(fmt.Sprintf("CALL without a function: %s", fn))
 			}
-			sf := makeStackFrame(this.ip)
+
+			sf := makeStackFrame(stack{}, this.ip, this.currentFrame)
 			this.pushStack(sf)
 
-			rval := fn.call(this, []value{})
+			rval := fn.call(this, builtinArgs)
 
 			if this.ignoreReturn {
 				this.ignoreReturn = false
@@ -252,21 +298,35 @@ func (this *vm) Run() value {
 		case DECLARE:
 			// ### ensure it doesn't exist
 			if execDebug {
-				log.Printf("Var %s declared (%d)", this.stringtable[op.odata.asInt()], op.odata.asInt())
+				log.Printf("Var %s declared (%d)", stringtable[op.odata.asInt()], op.odata.asInt())
 			}
-			this.currentFrame.vars[this.stringtable[op.odata.asInt()]] = value{}
+			this.currentFrame.vars[op.odata.asInt()] = &value{}
 		case STORE:
 			v := this.currentFrame.data_stack.pop()
 			if execDebug {
-				log.Printf("Storing %s in %s (%d)", v, this.stringtable[op.odata.asInt()], op.odata.asInt())
+				log.Printf("Storing %s in %s (%d)", v, stringtable[op.odata.asInt()], op.odata.asInt())
 			}
-			this.currentFrame.vars[this.stringtable[op.odata.asInt()]] = v
-		case LOAD:
-			v := this.currentFrame.vars[this.stringtable[op.odata.asInt()]]
+			sv := this.findVar(op.odata.asInt())
+			if sv == nil {
+				panic("var not found")
+			}
+			*sv = v
+		case LOAD_MEMBER:
+			v := this.currentFrame.data_stack.pop()
+			memb := v.get(stringtable[op.odata.asInt()])
 			if execDebug {
-				log.Printf("Loading %s from %d gave %s", this.stringtable[op.odata.asInt()], op.odata.asInt(), v)
+				log.Printf("LOAD_MEMBER %s.%s got %+v", v, stringtable[op.odata.asInt()], memb)
 			}
-			this.currentFrame.data_stack.push(v)
+			this.currentFrame.data_stack.push(memb)
+		case LOAD:
+			sv := this.findVar(op.odata.asInt())
+			if sv == nil {
+				panic("var not found")
+			}
+			if execDebug {
+				log.Printf("Loading %s from %d gave %s", stringtable[op.odata.asInt()], op.odata.asInt(), *sv)
+			}
+			this.currentFrame.data_stack.push(*sv)
 		default:
 			panic(fmt.Sprintf("unhandled opcode %+v", op))
 		}

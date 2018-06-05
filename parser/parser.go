@@ -65,28 +65,32 @@ func (this *parser) parseMemberExpression() Node {
 
 	left := this.parsePrimaryExpression()
 	tok := this.stream.peek()
-	if tok.tokenType == LBRACKET {
-		this.expect(LBRACKET)
-		right := this.parseExpression()
-		this.expect(RBRACKET)
-		return &BracketMemberExpression{tok: tok, left: left, right: right}
-	} else if tok.tokenType == DOT {
-		this.expect(DOT)
-		member := &IdentifierLiteral{tok: this.expect(IDENTIFIER)}
-		return &DotMemberExpression{tok: tok, left: left, right: member}
-	} else if tok.tokenType == LPAREN {
-		this.expect(LPAREN)
-		args := []Node{}
-		for this.stream.peek().tokenType != RPAREN {
-			arg := this.parseAssignmentExpression()
-			args = append(args, arg)
-			if this.stream.peek().tokenType == COMMA {
-				this.expect(COMMA)
-			}
-		}
-		this.expect(RPAREN)
 
-		return &CallExpression{tok: tok, X: left, Arguments: args}
+	for tok.tokenType == LBRACKET || tok.tokenType == DOT || tok.tokenType == LPAREN {
+		if tok.tokenType == LBRACKET {
+			this.expect(LBRACKET)
+			right := this.parseExpression()
+			this.expect(RBRACKET)
+			left = &BracketMemberExpression{tok: tok, left: left, right: right}
+		} else if tok.tokenType == DOT {
+			this.expect(DOT)
+			member := &IdentifierLiteral{tok: this.expect(IDENTIFIER)}
+			left = &DotMemberExpression{tok: tok, X: left, Name: member}
+		} else if tok.tokenType == LPAREN {
+			this.expect(LPAREN)
+			args := []Node{}
+			for this.stream.peek().tokenType != RPAREN {
+				arg := this.parseAssignmentExpression()
+				args = append(args, arg)
+				if this.stream.peek().tokenType == COMMA {
+					this.expect(COMMA)
+				}
+			}
+			this.expect(RPAREN)
+
+			left = &CallExpression{tok: tok, X: left, Arguments: args}
+		}
+		tok = this.stream.peek()
 	}
 
 	return left
@@ -312,7 +316,7 @@ func (this *parser) parseConditionalExpression() Node {
 		trueBranch := this.parseAssignmentExpression()
 		this.expect(COLON)
 		falseBranch := this.parseAssignmentExpression()
-		return &ConditionalExpression{tok: tok, test: test, trueBranch: trueBranch, falseBranch: falseBranch}
+		return &ConditionalExpression{tok: tok, X: test, Then: trueBranch, Else: falseBranch}
 	}
 
 	return test
@@ -457,13 +461,13 @@ func (this *parser) parseForStatement() Node {
 	tok := this.expect(FOR)
 	this.expect(LPAREN)
 
-	if this.stream.peek().tokenType == VAR {
-		panic("var declaration in for not yet supported")
-	}
-
 	var init Node
 	if this.stream.peek().tokenType != SEMICOLON {
-		init = this.parseExpression()
+		if this.stream.peek().tokenType == VAR {
+			init = this.parseVariableStatement()
+		} else {
+			init = this.parseExpression()
+		}
 	}
 	this.expect(SEMICOLON)
 	var test Node
@@ -606,7 +610,7 @@ func recursivelyPrint(node Node) string {
 	case *NewExpression:
 		return fmt.Sprintf("new %s", recursivelyPrint(n.expr))
 	case *DotMemberExpression:
-		return fmt.Sprintf("%s.%s", recursivelyPrint(n.left), recursivelyPrint(n.right))
+		return fmt.Sprintf("%s.%s", recursivelyPrint(n.X), recursivelyPrint(n.Name))
 	case *BracketMemberExpression:
 		return fmt.Sprintf("%s[%s]", recursivelyPrint(n.left), recursivelyPrint(n.right))
 	case *CallExpression:
@@ -662,7 +666,7 @@ func recursivelyPrint(node Node) string {
 		}
 		return ";"
 	case *ConditionalExpression:
-		return fmt.Sprintf("%s ? %s : %s", recursivelyPrint(n.test), recursivelyPrint(n.trueBranch), recursivelyPrint(n.falseBranch))
+		return fmt.Sprintf("%s ? %s : %s", recursivelyPrint(n.X), recursivelyPrint(n.Then), recursivelyPrint(n.Else))
 	case *BinaryExpression:
 		switch n.token().tokenType {
 		case MULTIPLY:

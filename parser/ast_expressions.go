@@ -8,13 +8,13 @@ package parser
 // * Somehow expose token.Pos/token.Token like Go does?
 
 type ExpressionStatement struct {
-       Node
-       tok token
-       X   Node
+	Node
+	tok token
+	X   Node
 }
 
 func (this *ExpressionStatement) token() token {
-       return this.tok
+	return this.tok
 }
 
 type NewExpression struct {
@@ -29,9 +29,9 @@ func (this *NewExpression) token() token {
 
 type DotMemberExpression struct {
 	Node
-	tok   token
-	left  Node
-	right *IdentifierLiteral
+	tok  token
+	X    Node
+	Name *IdentifierLiteral
 }
 
 func (this *DotMemberExpression) token() token {
@@ -88,10 +88,10 @@ func (this *BinaryExpression) token() token {
 
 type ConditionalExpression struct {
 	Node
-	tok         token
-	test        Node
-	trueBranch  Node
-	falseBranch Node
+	tok  token
+	X    Node
+	Then Node
+	Else Node
 }
 
 func (this *ConditionalExpression) token() token {

@@ -39,7 +39,6 @@ const (
 type value struct {
 	vtype value_type
 	vdata []byte // horrible un-type-safe voodoo
-	fptr  foFn
 	odata *objectData
 }
 
@@ -48,23 +47,23 @@ func newUndefined() value {
 }
 
 func newNull() value {
-	return value{NULL, nil, nil, &objectData{}}
+	return value{NULL, nil, &objectData{}}
 }
 
 func newBool(b bool) value {
-	v := value{BOOL, make([]byte, unsafe.Sizeof(b)), nil, &objectData{}}
+	v := value{BOOL, make([]byte, unsafe.Sizeof(b)), &objectData{}}
 	*(*bool)(unsafe.Pointer(&v.vdata[0])) = b
 	return v
 }
 
 func newNumber(val float64) value {
-	v := value{NUMBER, make([]byte, unsafe.Sizeof(val)), nil, &objectData{}}
+	v := value{NUMBER, make([]byte, unsafe.Sizeof(val)), &objectData{}}
 	*(*float64)(unsafe.Pointer(&v.vdata[0])) = val
 	return v
 }
 
 func newString(val string) value {
-	v := value{STRING, []byte(val), nil, &objectData{}}
+	v := value{STRING, []byte(val), &objectData{}}
 	return v
 }
 

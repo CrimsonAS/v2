@@ -99,7 +99,7 @@ func (this *parser) parseMemberExpression() Node {
 func (this *parser) parseNewExpression() Node {
 	tok := this.expect(NEW)
 	left := this.parseMemberExpression()
-	return &NewExpression{tok: tok, expr: left}
+	return &NewExpression{tok: tok, X: left}
 }
 
 func (this *parser) parseLeftHandSideExpression() Node {
@@ -608,7 +608,7 @@ func recursivelyPrint(node Node) string {
 			return fmt.Sprintf("function(%s) %s", args, recursivelyPrint(n.Body))
 		}
 	case *NewExpression:
-		return fmt.Sprintf("new %s", recursivelyPrint(n.expr))
+		return fmt.Sprintf("new %s", recursivelyPrint(n.X))
 	case *DotMemberExpression:
 		return fmt.Sprintf("%s.%s", recursivelyPrint(n.X), recursivelyPrint(n.Name))
 	case *BracketMemberExpression:

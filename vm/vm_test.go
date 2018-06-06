@@ -279,7 +279,7 @@ func TestBuiltinFunction(t *testing.T) {
 
 		ast := parser.Parse("testFunc()")
 		vm := NewVM(ast)
-		pf := newFunctionObject(testFunc)
+		pf := newFunctionObject(testFunc, nil)
 		vm.defineVar(appendStringtable("testFunc"), pf)
 		assert.Equal(t, vm.Run(), newString("Hello world"))
 	}
@@ -292,9 +292,34 @@ func TestBuiltinFunction(t *testing.T) {
 
 		ast := parser.Parse("testFunc(\"Hello\", \"World\")")
 		vm := NewVM(ast)
-		pf := newFunctionObject(testFunc)
+		pf := newFunctionObject(testFunc, nil)
 		vm.defineVar(appendStringtable("testFunc"), pf)
 		assert.Equal(t, vm.Run(), newString("HelloWorld"))
+	}
+
+	// test call vs construct
+	{
+		testCall := func(vm *vm, f value, args []value) value {
+			return newNumber(10)
+		}
+		testConstruct := func(vm *vm, f value, args []value) value {
+			return newNumber(20)
+		}
+
+		{
+			ast := parser.Parse("testFunc()")
+			vm := NewVM(ast)
+			pf := newFunctionObject(testCall, testConstruct)
+			vm.defineVar(appendStringtable("testFunc"), pf)
+			assert.Equal(t, vm.Run(), newNumber(10))
+		}
+		{
+			ast := parser.Parse("new testFunc()")
+			vm := NewVM(ast)
+			pf := newFunctionObject(testCall, testConstruct)
+			vm.defineVar(appendStringtable("testFunc"), pf)
+			assert.Equal(t, vm.Run(), newNumber(20))
+		}
 	}
 }
 

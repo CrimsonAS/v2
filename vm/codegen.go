@@ -53,6 +53,7 @@ const (
 	// the odata gives the argument count
 	// arguments are on the stack, as is the thing to call.
 	CALL
+	NEW // new(a)
 
 	// used to tell the VM which function it's inside, for debug printing
 	// purposes.
@@ -157,6 +158,8 @@ func (this opcode) String() string {
 		return fmt.Sprintf("JMP %d", int(this.odata))
 	case CALL:
 		return fmt.Sprintf("CALL(argc: %d)", int(this.odata))
+	case NEW:
+		return fmt.Sprintf("NEW(argc: %d)", int(this.odata))
 	case IN_FUNCTION:
 		return fmt.Sprintf("function %s:", stringtable[int(this.odata)])
 	case JNE:
@@ -235,7 +238,7 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 
 		for _, n := range this.funcsToDefine {
 			runBuiltin := callBuiltinAddr(this, n.Parameters, len(codebuf))
-			callFn := newFunctionObject(runBuiltin)
+			callFn := newFunctionObject(runBuiltin, nil)
 			varIdx := appendStringtable(n.Identifier.String())
 			this.defineVar(varIdx, callFn)
 
@@ -256,6 +259,11 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 	case *parser.FunctionExpression:
 		this.funcsToDefine = append(this.funcsToDefine, n)
 		return codebuf
+	case *parser.NewExpression:
+		this.isNew++
+		codebuf = append(codebuf, this.generateCode(n.X)...)
+		this.isNew--
+		return codebuf
 	case *parser.CallExpression:
 		codebuf = append(codebuf, this.generateCode(n.X)...)
 
@@ -265,7 +273,11 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 			codebuf = append(codebuf, this.generateCode(n.Arguments[len(n.Arguments)-(idx+1)])...)
 		}
 
-		codebuf = append(codebuf, newOpcode(CALL, float64(len(n.Arguments))))
+		if this.isNew > 0 {
+			codebuf = append(codebuf, newOpcode(NEW, float64(len(n.Arguments))))
+		} else {
+			codebuf = append(codebuf, newOpcode(CALL, float64(len(n.Arguments))))
+		}
 		return codebuf
 	case *parser.StringLiteral:
 		sl := appendStringtable(n.String())

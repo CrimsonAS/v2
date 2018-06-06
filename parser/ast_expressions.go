@@ -19,8 +19,8 @@ func (this *ExpressionStatement) token() token {
 
 type NewExpression struct {
 	Node
-	tok  token
-	expr Node
+	tok token
+	X   Node
 }
 
 func (this *NewExpression) token() token {

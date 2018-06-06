@@ -57,7 +57,9 @@ func TestFunctionExpression(t *testing.T) {
 }
 
 func TestNewExpression(t *testing.T) {
-	ep1 := &Program{body: []Node{&ExpressionStatement{X: &NewExpression{tok: token{tokenType: NEW, value: ""}, expr: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 4, col: 4}}}}}}
+	ep1 := &Program{body: []Node{&ExpressionStatement{
+		X: &NewExpression{tok: token{tokenType: NEW, value: ""}, X: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 4, col: 4}}},
+	}}}
 	assert.Equal(t, Parse("new true"), ep1)
 }
 

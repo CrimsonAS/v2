@@ -35,8 +35,10 @@ func (this *value) get(prop string) value {
 }
 
 type objectData struct {
-	objectType objectType
-	objects    []value
+	objectType   objectType
+	objects      []value
+	callPtr      foFn // used for function object
+	constructPtr foFn // used for function object
 }
 
 const objectDebug = false
@@ -91,29 +93,29 @@ func (this *objectData) set(prop string, v value) {
 type foFn func(vm *vm, f value, args []value) value
 
 func newObject() value {
-	v := value{OBJECT, nil, nil, &objectData{OBJECT_PLAIN, nil}}
+	v := value{OBJECT, nil, &objectData{OBJECT_PLAIN, nil, nil, nil}}
 	return v
 }
 
 func newBooleanObject(b bool) value {
-	v := value{OBJECT, make([]byte, unsafe.Sizeof(b)), nil, &objectData{BOOLEAN_OBJECT, nil}}
+	v := value{OBJECT, make([]byte, unsafe.Sizeof(b)), &objectData{BOOLEAN_OBJECT, nil, nil, nil}}
 	*(*bool)(unsafe.Pointer(&v.vdata[0])) = b
 	return v
 }
 
 func newNumberObject(n float64) value {
-	v := value{OBJECT, make([]byte, unsafe.Sizeof(n)), nil, &objectData{NUMBER_OBJECT, nil}}
+	v := value{OBJECT, make([]byte, unsafe.Sizeof(n)), &objectData{NUMBER_OBJECT, nil, nil, nil}}
 	*(*float64)(unsafe.Pointer(&v.vdata[0])) = n
 	return v
 }
 
 func newStringObject(s string) value {
-	v := value{OBJECT, []byte(s), nil, &objectData{STRING_OBJECT, nil}}
+	v := value{OBJECT, []byte(s), &objectData{STRING_OBJECT, nil, nil, nil}}
 	return v
 }
 
-func newFunctionObject(call foFn) value {
-	v := value{OBJECT, nil, call, &objectData{FUNCTION_OBJECT, nil}}
+func newFunctionObject(call foFn, construct foFn) value {
+	v := value{OBJECT, nil, &objectData{FUNCTION_OBJECT, nil, call, construct}}
 	return v
 }
 
@@ -143,5 +145,15 @@ func (this value) call(vm *vm, args []value) value {
 	if this.odata.objectType != FUNCTION_OBJECT {
 		panic(fmt.Sprintf("can't call non-function! %d", this.odata.objectType))
 	}
-	return this.fptr(vm, this, args)
+	return this.odata.callPtr(vm, this, args)
+}
+
+func (this value) construct(vm *vm, args []value) value {
+	if this.vtype != OBJECT {
+		panic(fmt.Sprintf("can't convert! %s", this.vtype))
+	}
+	if this.odata.objectType != FUNCTION_OBJECT {
+		panic(fmt.Sprintf("can't call non-function! %d", this.odata.objectType))
+	}
+	return this.odata.constructPtr(vm, this, args)
 }

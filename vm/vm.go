@@ -60,6 +60,7 @@ type vm struct {
 	funcsToDefine []*parser.FunctionExpression
 	returnValue   value
 	ignoreReturn  bool
+	isNew         int
 }
 
 const lookupDebug = false
@@ -83,22 +84,16 @@ func makeStackFrame(preparedData stack, returnAddr int, outer *stackFrame) stack
 	return stackFrame{data_stack: preparedData, vars: make(map[int]*value), retAddr: returnAddr, outer: outer}
 }
 
-func logFunc(vm *vm, f value, args []value) value {
-	log.Printf("console.log: %+v", args)
-	return newUndefined()
-}
-
 func NewVM(ast parser.Node) *vm {
-	vm := vm{[]stackFrame{}, nil, []opcode{}, 0, nil, value{}, false}
+	vm := vm{[]stackFrame{}, nil, []opcode{}, 0, nil, value{}, false, 0}
 	vm.stack = []stackFrame{makeStackFrame(stack{}, 0, nil)}
 	vm.currentFrame = &vm.stack[0]
 	vm.code = vm.generateCode(ast)
 
-	consoleO := newObject()
-	vm.defineVar(appendStringtable("console"), consoleO)
-
-	logO := newFunctionObject(logFunc)
-	consoleO.set("log", logO)
+	vm.defineVar(appendStringtable("console"), defineConsoleObject())
+	vm.defineVar(appendStringtable("Math"), defineMathObject())
+	vm.defineVar(appendStringtable("Boolean"), defineBooleanCtor())
+	vm.defineVar(appendStringtable("String"), defineStringCtor())
 
 	return &vm
 }
@@ -252,31 +247,9 @@ func (this *vm) Run() value {
 				}
 			}
 		case CALL:
-			// my, this is inefficient
-			builtinArgs := []value{}
-			for i := 0; i < op.odata.asInt(); i++ {
-				v := this.currentFrame.data_stack.pop()
-				if execDebug {
-					log.Printf("Loaded arg %d %s", i, v)
-				}
-				builtinArgs = append(builtinArgs, v)
-			}
-
-			fn := this.currentFrame.data_stack.pop()
-			if fn.vtype != OBJECT {
-				panic(fmt.Sprintf("CALL without a function: %s", fn))
-			}
-
-			sf := makeStackFrame(stack{}, this.ip, this.currentFrame)
-			this.pushStack(sf)
-
-			rval := fn.call(this, builtinArgs)
-
-			if this.ignoreReturn {
-				this.ignoreReturn = false
-			} else {
-				this.popStack(rval)
-			}
+			this.handleCall(op, false)
+		case NEW:
+			this.handleCall(op, true)
 		case RETURN:
 			// can't inline this to popStack, because the builtin case doesn't
 			// have a value pushed onto the data_stack.
@@ -333,4 +306,37 @@ func (this *vm) Run() value {
 	}
 
 	return this.returnValue
+}
+
+func (this *vm) handleCall(op opcode, isNew bool) {
+	// my, this is inefficient
+	builtinArgs := []value{}
+	for i := 0; i < op.odata.asInt(); i++ {
+		v := this.currentFrame.data_stack.pop()
+		if execDebug {
+			log.Printf("Loaded arg %d %s", i, v)
+		}
+		builtinArgs = append(builtinArgs, v)
+	}
+
+	fn := this.currentFrame.data_stack.pop()
+	if fn.vtype != OBJECT {
+		panic(fmt.Sprintf("CALL without a function: %s", fn))
+	}
+
+	sf := makeStackFrame(stack{}, this.ip, this.currentFrame)
+	this.pushStack(sf)
+
+	var rval value
+	if isNew {
+		rval = fn.construct(this, builtinArgs)
+	} else {
+		rval = fn.call(this, builtinArgs)
+	}
+
+	if this.ignoreReturn {
+		this.ignoreReturn = false
+	} else {
+		this.popStack(rval)
+	}
 }

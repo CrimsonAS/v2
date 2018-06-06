@@ -549,8 +549,8 @@ func (this *parser) parseProgram() *Program {
 
 const parseDebug = false
 
-func Parse(code string) Node {
-	np := parser{tokenStream{stream: &byteStream{code: code}}}
+func Parse(code string, ignoreComments bool) Node {
+	np := parser{tokenStream{stream: &byteStream{code: code}, ignoreComments: ignoreComments}}
 	ret := np.parseProgram()
 	if parseDebug {
 		log.Printf("%s", recursivelyPrint(ret))

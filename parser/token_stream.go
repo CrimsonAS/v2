@@ -2,9 +2,10 @@ package parser
 
 // A tokenStream consumes a byteStream to genereate tokens.
 type tokenStream struct {
-	stream     *byteStream
-	current    *token
-	hasStarted bool
+	stream         *byteStream
+	current        *token
+	hasStarted     bool
+	ignoreComments bool
 }
 
 type TokenType int
@@ -146,7 +147,7 @@ func (this *tokenStream) consumeComment() *token {
 	}
 
 	// ### multiline
-	panic("unreachable")
+	panic("multiline comments not supported")
 }
 
 // ### string escaping, single quoted strings, etc (es5 7.8.4)
@@ -464,6 +465,7 @@ func (this *tokenStream) consumePunctuation(firstDigit byte) *token {
 
 func (this *tokenStream) readNext() {
 	this.consumeWhitespace()
+
 	if this.stream.eof() {
 		this.current = this.createToken(EOF, "")
 		return
@@ -478,6 +480,9 @@ func (this *tokenStream) readNext() {
 
 	if c == '/' && (n == '/' || n == '*') {
 		this.current = this.consumeComment()
+		if this.ignoreComments {
+			this.readNext() // recurse until we hit EOF or something not a comment
+		}
 		return
 	}
 

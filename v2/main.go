@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/CrimsonAS/v2/parser"
 	"github.com/CrimsonAS/v2/vm"
 	"io/ioutil"
 	"log"
@@ -24,8 +23,7 @@ func main() {
 		os.Exit(0)
 	}
 	code, _ := ioutil.ReadFile(f)
-	ast := parser.Parse(string(code))
-	vm := vm.NewVM(ast)
+	vm := vm.New(string(code))
 	ret := vm.Run()
 	log.Printf("Code returned %s", ret)
 }

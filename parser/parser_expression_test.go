@@ -19,8 +19,8 @@ func TestFunctionExpression(t *testing.T) {
 		},
 	}}}
 	// for some strange reason, these don't compare equal...?
-	//assert.Equal(t, Parse("a = function() { true }"), ep1)
-	assert.Equal(t, fmt.Sprintf("%s", recursivelyPrint(Parse("a = function() { true }"))), fmt.Sprintf("%s", recursivelyPrint(ep1)))
+	//assert.Equal(t, Parse("a = function() { true }", false), ep1)
+	assert.Equal(t, fmt.Sprintf("%s", recursivelyPrint(Parse("a = function() { true }", false))), fmt.Sprintf("%s", recursivelyPrint(ep1)))
 
 	ep2 := &Program{body: []Node{&BinaryExpression{
 		tok:  token{tokenType: ASSIGNMENT, value: "", col: 2, pos: 2},
@@ -34,8 +34,8 @@ func TestFunctionExpression(t *testing.T) {
 		},
 	}}}
 	// for some strange reason, these don't compare equal...?
-	//assert.Equal(t, Parse("a = function() { true }"), ep1)
-	assert.Equal(t, fmt.Sprintf("%s", recursivelyPrint(Parse("a = function(b) { true }"))), fmt.Sprintf("%s", recursivelyPrint(ep2)))
+	//assert.Equal(t, Parse("a = function() { true }", false), ep1)
+	assert.Equal(t, fmt.Sprintf("%s", recursivelyPrint(Parse("a = function(b) { true }", false))), fmt.Sprintf("%s", recursivelyPrint(ep2)))
 
 	ep3 := &Program{body: []Node{&BinaryExpression{
 		tok:  token{tokenType: ASSIGNMENT, value: "", col: 2, pos: 2},
@@ -52,15 +52,15 @@ func TestFunctionExpression(t *testing.T) {
 		},
 	}}}
 	// for some strange reason, these don't compare equal...?
-	//assert.Equal(t, Parse("a = function() { true }"), ep1)
-	assert.Equal(t, fmt.Sprintf("%s", recursivelyPrint(Parse("a = function(b, c) { true }"))), fmt.Sprintf("%s", recursivelyPrint(ep3)))
+	//assert.Equal(t, Parse("a = function() { true }", false), ep1)
+	assert.Equal(t, fmt.Sprintf("%s", recursivelyPrint(Parse("a = function(b, c) { true }", false))), fmt.Sprintf("%s", recursivelyPrint(ep3)))
 }
 
 func TestNewExpression(t *testing.T) {
 	ep1 := &Program{body: []Node{&ExpressionStatement{
 		X: &NewExpression{tok: token{tokenType: NEW, value: ""}, X: &TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 4, col: 4}}},
 	}}}
-	assert.Equal(t, Parse("new true"), ep1)
+	assert.Equal(t, Parse("new true", false), ep1)
 }
 
 func TestCallExpression(t *testing.T) {
@@ -69,7 +69,7 @@ func TestCallExpression(t *testing.T) {
 		X:         &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
 		Arguments: []Node{},
 	}}}}
-	assert.Equal(t, Parse("a()"), ep1)
+	assert.Equal(t, Parse("a()", false), ep1)
 
 	ep2 := &Program{body: []Node{&ExpressionStatement{X: &CallExpression{
 		tok: token{tokenType: LPAREN, value: "", col: 1, pos: 1},
@@ -78,7 +78,7 @@ func TestCallExpression(t *testing.T) {
 			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 2, pos: 2}},
 		},
 	}}}}
-	assert.Equal(t, Parse("a(b)"), ep2)
+	assert.Equal(t, Parse("a(b)", false), ep2)
 
 	ep3 := &Program{body: []Node{&ExpressionStatement{X: &CallExpression{
 		tok: token{tokenType: LPAREN, value: "", col: 1, pos: 1},
@@ -88,7 +88,7 @@ func TestCallExpression(t *testing.T) {
 			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "c", col: 5, pos: 5}},
 		},
 	}}}}
-	assert.Equal(t, Parse("a(b, c)"), ep3)
+	assert.Equal(t, Parse("a(b, c)", false), ep3)
 }
 
 func TestDotMemberExpression(t *testing.T) {
@@ -97,7 +97,7 @@ func TestDotMemberExpression(t *testing.T) {
 		X:    &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
 		Name: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 2, pos: 2}}}},
 	}}
-	assert.Equal(t, Parse("a.b"), ep1)
+	assert.Equal(t, Parse("a.b", false), ep1)
 }
 
 func TestBracketMemberExpression(t *testing.T) {
@@ -106,7 +106,7 @@ func TestBracketMemberExpression(t *testing.T) {
 		left:  &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
 		right: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 2, pos: 2}}}},
 	}}
-	assert.Equal(t, Parse("a[b]"), ep1)
+	assert.Equal(t, Parse("a[b]", false), ep1)
 }
 
 // ### consider merging with TestUnaryExpression
@@ -120,7 +120,7 @@ func TestPostfixExpression(t *testing.T) {
 			},
 		},
 		}}}
-	assert.Equal(t, Parse("i++"), ep1)
+	assert.Equal(t, Parse("i++", false), ep1)
 
 	ep2 := &Program{body: []Node{
 		&ExpressionStatement{X: &UnaryExpression{
@@ -131,7 +131,7 @@ func TestPostfixExpression(t *testing.T) {
 			},
 		},
 		}}}
-	assert.Equal(t, Parse("i--"), ep2)
+	assert.Equal(t, Parse("i--", false), ep2)
 }
 
 func TestUnaryExpression(t *testing.T) {
@@ -210,7 +210,7 @@ func TestUnaryExpression(t *testing.T) {
 				},
 			},
 			}}}
-		assert.Equal(t, Parse(test.tokenString+" i"), ep1)
+		assert.Equal(t, Parse(test.tokenString+" i", false), ep1)
 		t.Logf("%s", fmt.Sprintf("Passed %s i", test.tokenString))
 	}
 }
@@ -377,7 +377,7 @@ func TestSimpleBinaryExpression(t *testing.T) {
 				},
 			},
 			}}}
-		assert.Equal(t, Parse("i "+test.tokenString+" i"), ep1)
+		assert.Equal(t, Parse("i "+test.tokenString+" i", false), ep1)
 		t.Logf("%s", fmt.Sprintf("Passed i %s i", test.tokenString))
 	}
 }
@@ -397,5 +397,5 @@ func TestConditionalExpression(t *testing.T) {
 			},
 		},
 		}}}
-	assert.Equal(t, Parse("a?b:c"), ep1)
+	assert.Equal(t, Parse("a?b:c", false), ep1)
 }

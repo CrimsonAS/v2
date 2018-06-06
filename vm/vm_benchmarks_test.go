@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"github.com/CrimsonAS/v2/parser"
 	"github.com/robertkrimen/otto"
 	"testing"
 )
@@ -64,11 +63,10 @@ func BenchmarkVM(b *testing.B) {
 	}
 
 	for _, test := range tests {
-		ast := parser.Parse(test.code)
 		b.Run(test.name,
 			func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					vm := NewVM(ast)
+					vm := New(test.code)
 					vm.Run()
 				}
 			})

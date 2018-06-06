@@ -28,7 +28,7 @@ func TestIfStatement(t *testing.T) {
 	},
 	}
 
-	assert.Equal(t, Parse("if (false) true"), ep1)
+	assert.Equal(t, Parse("if (false) true", false), ep1)
 
 	ep2 := &Program{body: []Node{
 		&IfStatement{
@@ -57,7 +57,7 @@ func TestIfStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("if (a) true else false"), ep2)
+	assert.Equal(t, Parse("if (a) true else false", false), ep2)
 }
 
 func TestReturnStatement(t *testing.T) {
@@ -67,7 +67,7 @@ func TestReturnStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("return"), ep1)
+	assert.Equal(t, Parse("return", false), ep1)
 
 	ep2 := &Program{body: []Node{
 		&ReturnStatement{
@@ -82,7 +82,7 @@ func TestReturnStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("return false"), ep2)
+	assert.Equal(t, Parse("return false", false), ep2)
 }
 
 func TestBlockStatement(t *testing.T) {
@@ -92,7 +92,7 @@ func TestBlockStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("{}"), ep1)
+	assert.Equal(t, Parse("{}", false), ep1)
 
 	ep2 := &Program{body: []Node{
 		&BlockStatement{
@@ -109,7 +109,7 @@ func TestBlockStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("{ false }"), ep2)
+	assert.Equal(t, Parse("{ false }", false), ep2)
 
 	ep3 := &Program{body: []Node{
 		&BlockStatement{
@@ -134,7 +134,7 @@ func TestBlockStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("{ true\nfalse }"), ep3)
+	assert.Equal(t, Parse("{ true\nfalse }", false), ep3)
 }
 
 func TestEmptyStatement(t *testing.T) {
@@ -144,7 +144,7 @@ func TestEmptyStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse(";"), ep1)
+	assert.Equal(t, Parse(";", false), ep1)
 
 	ep2 := &Program{body: []Node{
 		&EmptyStatement{
@@ -158,7 +158,7 @@ func TestEmptyStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("; ;"), ep2)
+	assert.Equal(t, Parse("; ;", false), ep2)
 }
 
 func TestVariableStatement(t *testing.T) {
@@ -174,7 +174,7 @@ func TestVariableStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("var x"), ep1)
+	assert.Equal(t, Parse("var x", false), ep1)
 
 	ep2 := &Program{body: []Node{
 		&VariableStatement{
@@ -190,7 +190,7 @@ func TestVariableStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("var x, y"), ep2)
+	assert.Equal(t, Parse("var x, y", false), ep2)
 
 	ep3 := &Program{body: []Node{
 		&VariableStatement{
@@ -204,7 +204,7 @@ func TestVariableStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("var x = a"), ep3)
+	assert.Equal(t, Parse("var x = a", false), ep3)
 }
 
 func TestDoWhileStatement(t *testing.T) {
@@ -223,7 +223,7 @@ func TestDoWhileStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("do { x } while (1)"), ep1)
+	assert.Equal(t, Parse("do { x } while (1)", false), ep1)
 }
 
 func TestWhileStatement(t *testing.T) {
@@ -242,7 +242,7 @@ func TestWhileStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("while (1) { x }"), ep1)
+	assert.Equal(t, Parse("while (1) { x }", false), ep1)
 }
 
 func TestForStatement(t *testing.T) {
@@ -267,7 +267,7 @@ func TestForStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("for (1;2;3) { x }"), ep1)
+	assert.Equal(t, Parse("for (1;2;3) { x }", false), ep1)
 
 	ep2 := &Program{body: []Node{
 		&ForStatement{
@@ -281,7 +281,7 @@ func TestForStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("for (;;) { x }"), ep2)
+	assert.Equal(t, Parse("for (;;) { x }", false), ep2)
 
 	ep3 := &Program{body: []Node{
 		&ForStatement{
@@ -310,5 +310,5 @@ func TestForStatement(t *testing.T) {
 		},
 	},
 	}
-	assert.Equal(t, Parse("for (var a = 1;;) { x }"), ep3)
+	assert.Equal(t, Parse("for (var a = 1;;) { x }", false), ep3)
 }

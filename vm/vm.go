@@ -84,7 +84,9 @@ func makeStackFrame(preparedData stack, returnAddr int, outer *stackFrame) stack
 	return stackFrame{data_stack: preparedData, vars: make(map[int]*value), retAddr: returnAddr, outer: outer}
 }
 
-func NewVM(ast parser.Node) *vm {
+func New(code string) *vm {
+	ast := parser.Parse(code, true /* ignore comments */)
+
 	vm := vm{[]stackFrame{}, nil, []opcode{}, 0, nil, value{}, false, 0}
 	vm.stack = []stackFrame{makeStackFrame(stack{}, 0, nil)}
 	vm.currentFrame = &vm.stack[0]

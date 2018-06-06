@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"github.com/CrimsonAS/v2/parser"
 	_ "github.com/kr/pretty"
 	"github.com/stvp/assert"
 	"testing"
@@ -14,8 +13,7 @@ type simpleVMTest struct {
 
 func runSimpleVMTestHelper(t *testing.T, tests []simpleVMTest) {
 	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
+		vm := New(test.in)
 		assert.Equal(t, vm.Run(), test.out)
 		t.Logf("Passed %s == %s", test.in, test.out)
 	}
@@ -277,8 +275,7 @@ func TestBuiltinFunction(t *testing.T) {
 			return newString("Hello world")
 		}
 
-		ast := parser.Parse("testFunc()")
-		vm := NewVM(ast)
+		vm := New("testFunc()")
 		pf := newFunctionObject(testFunc, nil)
 		vm.defineVar(appendStringtable("testFunc"), pf)
 		assert.Equal(t, vm.Run(), newString("Hello world"))
@@ -290,8 +287,7 @@ func TestBuiltinFunction(t *testing.T) {
 			return newString(args[0].toString() + args[1].toString())
 		}
 
-		ast := parser.Parse("testFunc(\"Hello\", \"World\")")
-		vm := NewVM(ast)
+		vm := New("testFunc(\"Hello\", \"World\")")
 		pf := newFunctionObject(testFunc, nil)
 		vm.defineVar(appendStringtable("testFunc"), pf)
 		assert.Equal(t, vm.Run(), newString("HelloWorld"))
@@ -307,15 +303,13 @@ func TestBuiltinFunction(t *testing.T) {
 		}
 
 		{
-			ast := parser.Parse("testFunc()")
-			vm := NewVM(ast)
+			vm := New("testFunc()")
 			pf := newFunctionObject(testCall, testConstruct)
 			vm.defineVar(appendStringtable("testFunc"), pf)
 			assert.Equal(t, vm.Run(), newNumber(10))
 		}
 		{
-			ast := parser.Parse("new testFunc()")
-			vm := NewVM(ast)
+			vm := New("new testFunc()")
 			pf := newFunctionObject(testCall, testConstruct)
 			vm.defineVar(appendStringtable("testFunc"), pf)
 			assert.Equal(t, vm.Run(), newNumber(20))
@@ -351,8 +345,7 @@ func TestJSFunction(t *testing.T) {
 }
 
 func TestRecursiveLookups(t *testing.T) {
-	ast := parser.Parse("function f(a) { if (a > 3) return a; a = a + 1; return f(a); } var n = f(0); n")
-	vm := NewVM(ast)
+	vm := New("function f(a) { if (a > 3) return a; a = a + 1; return f(a); } var n = f(0); n")
 	ret := vm.Run()
 	assert.Equal(t, ret, newNumber(4))
 }
@@ -371,8 +364,7 @@ func TestFibonnaci(t *testing.T) {
 
 	iterative := newUndefined()
 	{
-		ast := parser.Parse(f)
-		vm := NewVM(ast)
+		vm := New(f)
 		iterative = vm.Run()
 	}
 
@@ -390,8 +382,7 @@ func TestFibonnaci(t *testing.T) {
 
 	recursive := newUndefined()
 	{
-		ast := parser.Parse(f)
-		vm := NewVM(ast)
+		vm := New(f)
 		recursive = vm.Run()
 	}
 

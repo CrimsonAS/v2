@@ -7,353 +7,267 @@ import (
 	"testing"
 )
 
-func TestStrings(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
+type simpleVMTest struct {
+	in  string
+	out value
+}
 
-	tests := []simpleTest{
-		simpleTest{
+func runSimpleVMTestHelper(t *testing.T, tests []simpleVMTest) {
+	for _, test := range tests {
+		ast := parser.Parse(test.in)
+		vm := NewVM(ast)
+		assert.Equal(t, vm.Run(), test.out)
+		t.Logf("Passed %s == %s", test.in, test.out)
+	}
+}
+
+func TestStrings(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "\"hello\"",
 			out: newString("hello"),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "\"hello\"+\"world\"",
 			out: newString("helloworld"),
 		},
 	}
 
-	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+	runSimpleVMTestHelper(t, tests)
 }
 func TestPostfixOperators(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "var a = 0; a++",
 			out: newNumber(0),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "var a = 1; a--",
 			out: newNumber(1),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "var a = 0; var b = 1; a = b++; a",
 			out: newNumber(1),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "var a = 0; var b = 1; a = b++; b",
 			out: newNumber(2),
 		},
 	}
-	for _, test := range tests {
-		t.Logf("Running %s", test.in)
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+
+	runSimpleVMTestHelper(t, tests)
 }
 
 func TestPrefixOperators(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "var a = 0; ++a",
 			out: newNumber(1),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "var a = 0; --a",
 			out: newNumber(-1),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "!false",
 			out: newBool(true),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "!1",
 			out: newBool(false),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "!!1",
 			out: newBool(true),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "!!!1",
 			out: newBool(false),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "+3",
 			out: newNumber(3),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "-3",
 			out: newNumber(-3),
 		},
 	}
-	for _, test := range tests {
-		t.Logf("%s", test.in)
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+
+	runSimpleVMTestHelper(t, tests)
 }
 
 func TestSimple(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "2+3",
 			out: newNumber(5),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "(2+3)",
 			out: newNumber(5),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "(1+1)",
 			out: newNumber(2),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "(2+2)*(2+2)",
 			out: newNumber(16),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "10/2",
 			out: newNumber(5),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "if (true) { 10/2 }",
 			out: newNumber(5),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "if (false) { 10/2 }",
 			out: value{},
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "if (true) { 10/2 }",
 			out: newNumber(5),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "2+2*2+2",
 			out: newNumber(8),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "1<2",
 			out: newBool(true),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "1<=2",
 			out: newBool(true),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "2<=1",
 			out: newBool(false),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "2<1",
 			out: newBool(false),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "2>1",
 			out: newBool(true),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "1>2",
 			out: newBool(false),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "1==2",
 			out: newBool(false),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "1==1",
 			out: newBool(true),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "1!=2",
 			out: newBool(true),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "1!=1",
 			out: newBool(false),
 		},
 	}
 
-	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+	runSimpleVMTestHelper(t, tests)
 }
 
 func TestCall(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "f() function f() { 5 }",
 			out: newNumber(5),
 		},
 	}
 
-	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+	runSimpleVMTestHelper(t, tests)
 }
 
 func TestVar(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "var a = 5, b; b = a + 10",
 			out: newNumber(15),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "var a = 5; a",
 			out: newNumber(5),
 		},
 	}
 
-	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+	runSimpleVMTestHelper(t, tests)
 }
 
 func TestWhile(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "var a = 0; while (a > 10) a = a + 1; a",
 			out: newNumber(0),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "var a = 0; while (a < 10) a = a + 1; a",
 			out: newNumber(10),
 		},
 	}
 
-	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+	runSimpleVMTestHelper(t, tests)
 }
 
 func TestDoWhile(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "var a = 0; do { a = a + 1 } while (a > 10); a",
 			out: newNumber(1),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "var a = 0; do { a = a + 1 } while (a < 5); a",
 			out: newNumber(5),
 		},
 	}
 
-	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+	runSimpleVMTestHelper(t, tests)
 }
 
 func TestForStatement(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "var a = 0; for (a = 0; a < 5; a = a + 1) { }; a",
 			out: newNumber(5),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "var a = 10; for (; a < 5; a = a + 1) { }; a",
 			out: newNumber(10),
 		},
 	}
 
-	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+	runSimpleVMTestHelper(t, tests)
 }
 
 func TestReturnStatement(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "function f() { return 10; } var a; a = f();",
 			out: newNumber(10),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "function a() { return 10; } function b() { return 5; } var c = a(); c;",
 			out: newNumber(10),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "function a() { return 10; } function b() { return 5; } var c = b(); c;",
 			out: newNumber(5),
 		},
 	}
 
-	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+	runSimpleVMTestHelper(t, tests)
 }
 
 func TestBuiltinFunction(t *testing.T) {
@@ -385,40 +299,30 @@ func TestBuiltinFunction(t *testing.T) {
 }
 
 func TestJSFunction(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "function f(a) { return a; } var b; b = f(10);",
 			out: newNumber(10),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "function f(a) { return a; } var a; a = f(10);",
 			out: newNumber(10),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "function f(a, b) { return a; } var a; a = f(10, 5);",
 			out: newNumber(10),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "function f(a, b) { return b; } var a; a = f(5, 10);",
 			out: newNumber(10),
 		},
-		simpleTest{
+		simpleVMTest{
 			in:  "function f(a, b) { return a; } var a; a = f(5, 10);",
 			out: newNumber(5),
 		},
 	}
 
-	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+	runSimpleVMTestHelper(t, tests)
 }
 
 func TestRecursiveLookups(t *testing.T) {
@@ -471,27 +375,17 @@ func TestFibonnaci(t *testing.T) {
 }
 
 func TestConditionalExpression(t *testing.T) {
-	type simpleTest struct {
-		in  string
-		out value
-	}
-
-	tests := []simpleTest{
-		simpleTest{
+	tests := []simpleVMTest{
+		simpleVMTest{
 			in:  "var a = 1; var b = a == 1 ? 2 : 3;",
 			out: newNumber(2),
 		},
 		// ### failing, which seems odd...
-		//simpleTest{
+		//simpleVMTest{
 		//	in:  "var a = 1; var b = a == 1 ? 2 : 3; b",
 		//	out: newNumber(2),
 		//},
 	}
 
-	for _, test := range tests {
-		ast := parser.Parse(test.in)
-		vm := NewVM(ast)
-		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
-	}
+	runSimpleVMTestHelper(t, tests)
 }

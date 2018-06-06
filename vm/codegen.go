@@ -7,11 +7,11 @@ import (
 )
 
 // opcode instructions...
-type opcode_type int
+type opcode_type uint8
 
 const (
 	// a + b
-	PLUS opcode_type = iota
+	ADD opcode_type = iota
 
 	// +a
 	UPLUS
@@ -23,7 +23,7 @@ const (
 	UNOT
 
 	// a - b
-	MINUS
+	SUB
 
 	// a * b
 	MULTIPLY
@@ -116,7 +116,7 @@ type opcode struct {
 
 func (this opcode) String() string {
 	switch this.otype {
-	case PLUS:
+	case ADD:
 		return "ADD"
 	case UPLUS:
 		return "UPLUS"
@@ -124,7 +124,7 @@ func (this opcode) String() string {
 		return "UMINUS"
 	case UNOT:
 		return "UNOT"
-	case MINUS:
+	case SUB:
 		return "SUB"
 	case MULTIPLY:
 		return "MUL"
@@ -265,13 +265,10 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		this.isNew--
 		return codebuf
 	case *parser.CallExpression:
-		codebuf = append(codebuf, this.generateCode(n.X)...)
-
-		// We push the arguments in _reverse_ order so that CALL can build an
-		// argument list just by popping.
-		for idx, _ := range n.Arguments {
-			codebuf = append(codebuf, this.generateCode(n.Arguments[len(n.Arguments)-(idx+1)])...)
+		for _, arg := range n.Arguments {
+			codebuf = append(codebuf, this.generateCode(arg)...)
 		}
+		codebuf = append(codebuf, this.generateCode(n.X)...)
 
 		if this.isNew > 0 {
 			codebuf = append(codebuf, newOpcode(NEW, float64(len(n.Arguments))))
@@ -298,13 +295,15 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		return codebuf
 	case *parser.UnaryExpression:
 		if n.IsPrefix() {
-			codebuf = append(codebuf, this.generateCode(n.X)...)
 			switch n.Operator() {
 			case parser.PLUS:
+				codebuf = append(codebuf, this.generateCode(n.X)...)
 				codebuf = append(codebuf, simpleOp(UPLUS))
 			case parser.MINUS:
+				codebuf = append(codebuf, this.generateCode(n.X)...)
 				codebuf = append(codebuf, simpleOp(UMINUS))
 			case parser.LOGICAL_NOT:
+				codebuf = append(codebuf, this.generateCode(n.X)...)
 				codebuf = append(codebuf, simpleOp(UNOT))
 
 			// See the comment for postfix INCREMENT/DECREMENT.
@@ -313,14 +312,18 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 				varIdx := float64(appendStringtable(lhs.String()))
 				codebuf = append(codebuf, this.generateCode(n.X)...)
 				codebuf = append(codebuf, simpleOp(INCREMENT))
-				codebuf = append(codebuf, simpleOp(DUP))
+				if this.canConsume > 0 {
+					codebuf = append(codebuf, simpleOp(DUP))
+				}
 				codebuf = append(codebuf, newOpcode(STORE, varIdx))
 			case parser.DECREMENT:
 				lhs := n.X.(*parser.IdentifierLiteral)
 				varIdx := float64(appendStringtable(lhs.String()))
 				codebuf = append(codebuf, this.generateCode(n.X)...)
 				codebuf = append(codebuf, simpleOp(DECREMENT))
-				codebuf = append(codebuf, simpleOp(DUP))
+				if this.canConsume > 0 {
+					codebuf = append(codebuf, simpleOp(DUP))
+				}
 				codebuf = append(codebuf, newOpcode(STORE, varIdx))
 			default:
 				panic(fmt.Sprintf("unknown prefix unary operator %s", n.Operator()))
@@ -335,12 +338,16 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 			switch n.Operator() {
 			case parser.INCREMENT:
 				codebuf = append(codebuf, this.generateCode(n.X)...)
-				codebuf = append(codebuf, simpleOp(DUP))
+				if this.canConsume > 0 {
+					codebuf = append(codebuf, simpleOp(DUP))
+				}
 				codebuf = append(codebuf, simpleOp(INCREMENT))
 				codebuf = append(codebuf, newOpcode(STORE, varIdx))
 			case parser.DECREMENT:
 				codebuf = append(codebuf, this.generateCode(n.X)...)
-				codebuf = append(codebuf, simpleOp(DUP))
+				if this.canConsume > 0 {
+					codebuf = append(codebuf, simpleOp(DUP))
+				}
 				codebuf = append(codebuf, simpleOp(DECREMENT))
 				codebuf = append(codebuf, newOpcode(STORE, varIdx))
 			default:
@@ -349,16 +356,18 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		}
 		return codebuf
 	case *parser.BinaryExpression:
+		this.canConsume++
+		defer func() { this.canConsume = this.canConsume - 1 }()
 		switch n.Operator() {
 		case parser.PLUS:
 			codebuf = append(codebuf, this.generateCode(n.Right)...)
 			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(PLUS))
+			codebuf = append(codebuf, simpleOp(ADD))
 			return codebuf
 		case parser.MINUS:
 			codebuf = append(codebuf, this.generateCode(n.Right)...)
 			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(MINUS))
+			codebuf = append(codebuf, simpleOp(SUB))
 			return codebuf
 		case parser.MULTIPLY:
 			codebuf = append(codebuf, this.generateCode(n.Right)...)
@@ -399,13 +408,14 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 			lhs := n.Left.(*parser.IdentifierLiteral)
 			codebuf = append(codebuf, this.generateCode(n.Right)...)
 			varIdx := float64(appendStringtable(lhs.String()))
-			codebuf = append(codebuf, simpleOp(DUP)) // duplicate so it's available as a return value too...
 			codebuf = append(codebuf, newOpcode(STORE, varIdx))
 			return codebuf
 		default:
 			panic(fmt.Sprintf("unknown operator %s", n.Operator()))
 		}
 	case *parser.ReturnStatement:
+		this.canConsume++
+		defer func() { this.canConsume = this.canConsume - 1 }()
 		if n.X != nil {
 			codebuf = append(codebuf, this.generateCode(n.X)...)
 		} else {

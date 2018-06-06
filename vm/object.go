@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-type objectType int
+type objectType uint8
 
 const (
 	NOT_AN_OBJECT objectType = iota

@@ -36,11 +36,11 @@ func TestStrings(t *testing.T) {
 func TestPostfixOperators(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 0; a++",
+			in:  "var a = 0; var b; b = a++; b",
 			out: newNumber(0),
 		},
 		simpleVMTest{
-			in:  "var a = 1; a--",
+			in:  "var a = 1; var b; b = a--; b",
 			out: newNumber(1),
 		},
 		simpleVMTest{
@@ -59,11 +59,11 @@ func TestPostfixOperators(t *testing.T) {
 func TestPrefixOperators(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 0; ++a",
+			in:  "var a = 0; var b; b = ++a; b",
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  "var a = 0; --a",
+			in:  "var a = 0; var b; b = --a; b",
 			out: newNumber(-1),
 		},
 		simpleVMTest{
@@ -192,7 +192,7 @@ func TestCall(t *testing.T) {
 func TestVar(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 5, b; b = a + 10",
+			in:  "var a = 5, b; b = a + 10; b",
 			out: newNumber(15),
 		},
 		simpleVMTest{
@@ -252,7 +252,7 @@ func TestForStatement(t *testing.T) {
 func TestReturnStatement(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "function f() { return 10; } var a; a = f();",
+			in:  "function f() { return 10; } var a; a = f(); a;",
 			out: newNumber(10),
 		},
 		simpleVMTest{
@@ -320,23 +320,23 @@ func TestBuiltinFunction(t *testing.T) {
 func TestJSFunction(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "function f(a) { return a; } var b; b = f(10);",
+			in:  "function f(a) { return a; } var b; b = f(10); b",
 			out: newNumber(10),
 		},
 		simpleVMTest{
-			in:  "function f(a) { return a; } var a; a = f(10);",
+			in:  "function f(a) { return a; } var a; a = f(10); a",
 			out: newNumber(10),
 		},
 		simpleVMTest{
-			in:  "function f(a, b) { return a; } var a; a = f(10, 5);",
+			in:  "function f(a, b) { return a; } var a; a = f(10, 5); a",
 			out: newNumber(10),
 		},
 		simpleVMTest{
-			in:  "function f(a, b) { return b; } var a; a = f(5, 10);",
+			in:  "function f(a, b) { return b; } var a; a = f(5, 10); a",
 			out: newNumber(10),
 		},
 		simpleVMTest{
-			in:  "function f(a, b) { return a; } var a; a = f(5, 10);",
+			in:  "function f(a, b) { return a; } var a; a = f(5, 10); a",
 			out: newNumber(5),
 		},
 	}

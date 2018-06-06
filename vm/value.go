@@ -2,12 +2,13 @@ package vm
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"strconv"
 	"unsafe"
 )
 
-type value_type int
+type value_type uint8
 
 func (this value_type) String() string {
 	switch this {
@@ -47,23 +48,70 @@ func newUndefined() value {
 }
 
 func newNull() value {
-	return value{NULL, nil, &objectData{}}
+	return value{NULL, nil, nil}
 }
 
-func newBool(b bool) value {
-	v := value{BOOL, make([]byte, unsafe.Sizeof(b)), &objectData{}}
-	*(*bool)(unsafe.Pointer(&v.vdata[0])) = b
-	return v
+// A simple allocation pool, to help reduce value allocation time.
+type vdataPool struct {
+	pool []byte
+	head int
+}
+
+const maxPoolSize = 1024 * 10
+
+func (this *vdataPool) reallocate() {
+	this.pool = make([]byte, maxPoolSize)
+	this.head = 0
+}
+
+const poolDebug = false
+
+func (this *vdataPool) alloc(sz int) []byte {
+	if sz >= maxPoolSize {
+		panic("allocation exceeds vdata pool bounds; how?!")
+	}
+	if this.head+sz >= len(this.pool) {
+		if poolDebug {
+			log.Printf("Reallocating pool")
+		}
+		this.reallocate()
+	}
+	ret := this.pool[this.head : this.head+sz]
+	this.head += sz
+	return ret
+}
+
+var allocPool = vdataPool{}
+
+// allocPool is great, but let's avoid even allocating for booleans that are
+// used everywhere and absolutely never change...
+var trueVData []byte = make([]byte, 1)
+var falseVData []byte = make([]byte, 1)
+
+func init() {
+	*(*bool)(unsafe.Pointer(&trueVData[0])) = true
+	*(*bool)(unsafe.Pointer(&falseVData[0])) = false
+}
+
+func newBool(val bool) value {
+	if val {
+		return value{BOOL, trueVData, nil}
+	} else {
+		return value{BOOL, falseVData, nil}
+	}
 }
 
 func newNumber(val float64) value {
-	v := value{NUMBER, make([]byte, unsafe.Sizeof(val)), &objectData{}}
+	v := value{NUMBER, allocPool.alloc(8), nil}
 	*(*float64)(unsafe.Pointer(&v.vdata[0])) = val
 	return v
 }
 
 func newString(val string) value {
-	v := value{STRING, []byte(val), &objectData{}}
+	v := value{STRING, allocPool.alloc(len(val)), nil}
+	for i, c := range []byte(val) {
+		v.vdata[i] = c
+	}
 	return v
 }
 

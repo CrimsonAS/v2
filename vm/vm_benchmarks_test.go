@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-func BenchmarkVM(b *testing.B) {
-	type benchmark struct {
-		name string
-		code string
-	}
+type benchmark struct {
+	name string
+	code string
+}
 
-	tests := []benchmark{
+func vmBenchmarks() []benchmark {
+	return []benchmark{
 		benchmark{
 			name: "fib_it",
 			code: `function fibonacci(n) {
@@ -61,7 +61,10 @@ func BenchmarkVM(b *testing.B) {
 				sum(10000)`,
 		},
 	}
+}
 
+func BenchmarkVM(b *testing.B) {
+	tests := vmBenchmarks()
 	for _, test := range tests {
 		b.Run(test.name,
 			func(b *testing.B) {
@@ -70,7 +73,13 @@ func BenchmarkVM(b *testing.B) {
 					vm.Run()
 				}
 			})
-		b.Run(test.name+"_o",
+	}
+}
+
+func BenchmarkVM_Otto(b *testing.B) {
+	tests := vmBenchmarks()
+	for _, test := range tests {
+		b.Run(test.name,
 			func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					vm := otto.New()

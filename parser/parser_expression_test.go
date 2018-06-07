@@ -46,7 +46,7 @@ func TestFunctionExpression(t *testing.T) {
 	}}}
 	// for some strange reason, these don't compare equal...?
 	//assert.Equal(t, Parse("a = function() { true }", false), ep1)
-	assert.Equal(t, fmt.Sprintf("%s", recursivelyPrint(Parse("a = function() { true }", false))), fmt.Sprintf("%s", recursivelyPrint(ep1)))
+	assert.Equal(t, fmt.Sprintf("%s", RecursivelyPrint(Parse("a = function() { true }", false))), fmt.Sprintf("%s", RecursivelyPrint(ep1)))
 
 	ep2 := &Program{body: []Node{&BinaryExpression{
 		tok:  token{tokenType: ASSIGNMENT, value: "", col: 2, pos: 2},
@@ -61,7 +61,7 @@ func TestFunctionExpression(t *testing.T) {
 	}}}
 	// for some strange reason, these don't compare equal...?
 	//assert.Equal(t, Parse("a = function() { true }", false), ep1)
-	assert.Equal(t, fmt.Sprintf("%s", recursivelyPrint(Parse("a = function(b) { true }", false))), fmt.Sprintf("%s", recursivelyPrint(ep2)))
+	assert.Equal(t, fmt.Sprintf("%s", RecursivelyPrint(Parse("a = function(b) { true }", false))), fmt.Sprintf("%s", RecursivelyPrint(ep2)))
 
 	ep3 := &Program{body: []Node{&BinaryExpression{
 		tok:  token{tokenType: ASSIGNMENT, value: "", col: 2, pos: 2},
@@ -79,7 +79,7 @@ func TestFunctionExpression(t *testing.T) {
 	}}}
 	// for some strange reason, these don't compare equal...?
 	//assert.Equal(t, Parse("a = function() { true }", false), ep1)
-	assert.Equal(t, fmt.Sprintf("%s", recursivelyPrint(Parse("a = function(b, c) { true }", false))), fmt.Sprintf("%s", recursivelyPrint(ep3)))
+	assert.Equal(t, fmt.Sprintf("%s", RecursivelyPrint(Parse("a = function(b, c) { true }", false))), fmt.Sprintf("%s", RecursivelyPrint(ep3)))
 }
 
 func TestNewExpression(t *testing.T) {

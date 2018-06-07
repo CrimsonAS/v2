@@ -111,6 +111,16 @@ const (
 
 	// duplicate the top of the stack
 	DUP
+
+	// Start an object definition. It will be followed by property definition,
+	// and an END_OBJECT.
+	NEW_OBJECT
+
+	// Define property of the NEW_OBJECT on the stack, with the arg on the stack.
+	DEFINE_PROPERTY
+
+	// End object definition.
+	END_OBJECT
 )
 
 // 'odata' is a piece of information attached to an opcode. It can be nothing,
@@ -156,6 +166,12 @@ func (this opcode) String() string {
 		return "MUL"
 	case DIVIDE:
 		return "DIV"
+	case NEW_OBJECT:
+		return "NEW_OBJECT"
+	case DEFINE_PROPERTY:
+		return "DEFINE_PROPERTY"
+	case END_OBJECT:
+		return "END_OBJECT"
 	case DUP:
 		return "DUP"
 	case INCREMENT:
@@ -326,6 +342,33 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		return codebuf
 	case *parser.NullLiteral:
 		codebuf = append(codebuf, simpleOp(PUSH_NULL))
+		return codebuf
+	case *parser.ObjectLiteral:
+		codebuf = append(codebuf, simpleOp(NEW_OBJECT))
+
+		for _, prop := range n.Properties {
+			switch pk := prop.Key.(type) {
+			case *parser.IdentifierLiteral:
+				kl := appendStringtable(pk.String())
+				codebuf = append(codebuf, newOpcode(PUSH_STRING, float64(kl)))
+			case *parser.NumericLiteral:
+				kl := appendStringtable(pk.String())
+				codebuf = append(codebuf, newOpcode(PUSH_STRING, float64(kl)))
+			case *parser.StringLiteral:
+				kl := appendStringtable(pk.String())
+				codebuf = append(codebuf, newOpcode(PUSH_STRING, float64(kl)))
+			default:
+				panic("unknown object key")
+			}
+			codebuf = append(codebuf, this.generateCode(prop.X)...)
+			codebuf = append(codebuf, simpleOp(DEFINE_PROPERTY))
+		}
+
+		if this.canConsume > 0 {
+			codebuf = append(codebuf, simpleOp(DUP))
+		}
+
+		codebuf = append(codebuf, simpleOp(END_OBJECT))
 		return codebuf
 	case *parser.UnaryExpression:
 		if n.IsPrefix() {
@@ -524,6 +567,9 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		return codebuf
 	case *parser.VariableStatement:
 		// ### these should come at the start of a function
+		this.canConsume++
+		defer func() { this.canConsume = this.canConsume - 1 }()
+
 		for idx, _ := range n.Vars {
 			v := n.Vars[idx]
 			i := n.Initializers[idx]

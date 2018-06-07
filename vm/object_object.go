@@ -34,7 +34,7 @@ var objectProto value
 
 // Keep in mind that this is not just used by this file.
 func newObject() value {
-	v := value{OBJECT, nil, &objectData{OBJECT_PLAIN, value{}, nil, nil, nil}}
+	v := value{OBJECT, nil, &objectData{OBJECT_PLAIN, value{}, nil, nil, nil, true}}
 	return v
 }
 
@@ -47,7 +47,6 @@ func defineObjectCtor(vm *vm) value {
 	objectCtor := newFunctionObject(object_call, object_ctor)
 	objectCtor.defineDefaultProperty(vm, "getPrototypeOf", newFunctionObject(object_ctor_getPrototypeOf, nil), 0)
 	objectCtor.odata.prototype = objectProto
-	objectProto.set(vm, "constructor", objectCtor)
 
 	return objectCtor
 }
@@ -128,7 +127,7 @@ func object_ctor_getPrototypeOf(vm *vm, f value, args []value) value {
 
 func object_get(vm *vm, f value, prop string, pd *propertyDescriptor) value {
 	if objectDebug {
-		log.Printf("object_get %s", prop)
+		log.Printf("object_get %s %+v", prop, pd)
 	}
 	return pd.value
 }

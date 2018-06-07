@@ -690,6 +690,24 @@ func TestTokens(t *testing.T) {
 			},
 		},
 		tokenStreamTest{
+			input: "get",
+			output: []token{
+				token{
+					tokenType: GET,
+					value:     "get",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "set",
+			output: []token{
+				token{
+					tokenType: SET,
+					value:     "set",
+				},
+			},
+		},
+		tokenStreamTest{
 			input: "for",
 			output: []token{
 				token{

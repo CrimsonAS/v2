@@ -43,61 +43,221 @@ const (
 	FUNCTION_OBJECT
 )
 
-func (this value) defineDefaultProperty(vm *vm, prop string, v value, lt int) value {
-	if objectDebug {
-		log.Printf("Defining %s on %s = %s", prop, this, v)
-	}
-	if pdata := this.getOwnProperty(vm, prop); pdata != nil {
-		panic(fmt.Sprintf("property already exists: %s", prop))
-	}
-
-	pd := propertyDescriptor{name: prop, get: object_get, set: object_set, length: lt, enumerable: true, configurable: false, value: v}
-	this.odata.properties = append(this.odata.properties, pd)
-	return newUndefined()
+func (this value) defineDefaultProperty(vm *vm, prop string, v value, lt int) bool {
+	pd := &propertyDescriptor{name: prop, length: lt, enumerable: true, configurable: false, value: v}
+	return this.defineOwnProperty(vm, prop, pd, true)
 }
 
-func (this value) defineReadonlyProperty(vm *vm, prop string, v value, lt int) value {
-	if objectDebug {
-		log.Printf("Defining %s on %s = %s", prop, this, v)
-	}
-	if pdata := this.getOwnProperty(vm, prop); pdata != nil {
-		panic(fmt.Sprintf("property already exists: %s", prop))
-	}
-
-	pd := propertyDescriptor{name: prop, get: object_get, set: object_set, length: lt, enumerable: true, configurable: false, value: v}
-	this.odata.properties = append(this.odata.properties, pd)
-	return newUndefined()
+func (this value) defineReadonlyProperty(vm *vm, prop string, v value, lt int) bool {
+	pd := &propertyDescriptor{name: prop, length: lt, enumerable: true, configurable: false, value: v}
+	return this.defineOwnProperty(vm, prop, pd, true)
 }
 
-func (this value) set(vm *vm, prop string, v value) value {
+func (this value) canPut(vm *vm, prop string) bool {
+	desc := this.getOwnProperty(vm, prop)
+	if desc != nil {
+		if desc.isAccessorDescriptor() {
+			if desc.set != nil {
+				return false
+			} else {
+				return true
+			}
+		} else {
+			return desc.writable
+		}
+	}
+
+	proto := this.odata.prototype
+	if proto.vtype == NULL {
+		return this.odata.extensible
+	}
+
+	inherited := proto.getProperty(vm, prop)
+	if inherited == nil {
+		return this.odata.extensible
+	}
+
+	if inherited.isAccessorDescriptor() {
+		if inherited.set == nil {
+			return false
+		} else {
+			return true
+		}
+	} else {
+		if !this.odata.extensible {
+			return false
+		} else {
+			return inherited.writable
+		}
+	}
+	return true
+}
+
+// ### ArrayObject [[DefineOwnProperty]] 15.4.5.1
+func (this value) defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool {
+	if objectDebug {
+		//log.Printf("Defining %s on %s %t", prop, this, this.odata.extensible)
+	}
+	current := this.getOwnProperty(vm, prop)
+	extensible := this.odata.extensible
+	if current == nil {
+		if !extensible {
+			if throw {
+				panic("TypeError")
+			} else {
+				return false
+			}
+		}
+
+		var pd *propertyDescriptor
+		if desc.isGenericDescriptor() || desc.isDataDescriptor() {
+			pd = &propertyDescriptor{name: prop, value: desc.value, writable: desc.writable, enumerable: desc.enumerable, configurable: desc.configurable}
+		} else {
+			pd = &propertyDescriptor{name: prop, get: desc.get, set: desc.set, enumerable: desc.enumerable, configurable: desc.configurable}
+		}
+		this.odata.properties = append(this.odata.properties, pd)
+		//log.Printf("Added new property %s %+v", prop, pd)
+		return true
+	}
+
+	// ### 8.12.9 5/6
+	// "return true if every field in 'desc' is absent
+	// return true if every field in desc also occurs in current, and the value
+	// of every field in desc is the same value as the corresponding field in
+	// current using the SameValue algorithm (9.12)
+
+	if !current.configurable {
+		if desc.configurable {
+			if throw {
+				panic("TypeError")
+			} else {
+				return false
+			}
+		}
+
+		if desc.enumerable && !current.enumerable {
+			if throw {
+				panic("TypeError")
+			} else {
+				return false
+			}
+		}
+	}
+
+	if desc.isGenericDescriptor() {
+		// no validation needed (es5 8.12.9 8)
+	} else if current.isDataDescriptor() != desc.isDataDescriptor() {
+		if !current.configurable {
+			if throw {
+				panic("TypeError")
+			} else {
+				return false
+			}
+		}
+
+		if current.isDataDescriptor() {
+			// ###
+			// Convert the property named P of object O from a data property to
+			// an accessor property. Preserve the existing values of
+			// [[Configurable]] and [[Enumerable]] and set the rest of the
+			// property's attributes to their default values.
+		} else {
+			// ###
+			// Convert the property named P of object O from an accessor
+			// property to a data property. Preserve the existing values of the
+			// converted property's [[Configurable]] and [[Enumerable]
+			// attributes, and set the rest of the property's attributes to
+			// their default values.
+		}
+	} else if current.isDataDescriptor() && desc.isDataDescriptor() {
+		if !current.configurable {
+			if !current.writable && desc.writable {
+				if throw {
+					panic("TypeError")
+				} else {
+					return false
+				}
+			}
+
+			if !current.writable {
+				// ### reject if the value field of desc is present and
+				// SameValue(desc.value, current.value) is false
+			}
+		}
+
+		// If it's configurable, any change is OK.
+	} else if current.isAccessorDescriptor() && desc.isAccessorDescriptor() {
+		if !current.configurable {
+			// ### reject if desc.set is present and samevalue(desc.set,
+			// current.set) is false
+			// reject if desc.get is present and samevalue(desc.get,
+			// current.get) is false
+		}
+	}
+
+	current.name = desc.name
+	current.get = desc.get
+	current.set = desc.set
+	current.value = desc.value
+	current.length = desc.length
+	current.propIdx = desc.propIdx
+	current.writable = desc.writable
+	current.enumerable = desc.enumerable
+	current.configurable = desc.configurable
+	//log.Printf("Defined property %s on %s", prop, this)
+	return true
+}
+
+func (this value) put(vm *vm, prop string, v value, throw bool) {
+	if objectDebug {
+		log.Printf("Setting %s = %s on %s", prop, v, this)
+	}
+	if !this.canPut(vm, prop) {
+		if throw {
+			panic("TypeError")
+		}
+		return
+	}
+
+	ownDesc := this.getOwnProperty(vm, prop)
+	if ownDesc.isDataDescriptor() {
+		valueDesc := &propertyDescriptor{value: v}
+		this.defineOwnProperty(vm, prop, valueDesc, throw)
+		return
+	}
+
 	desc := this.getProperty(vm, prop)
-	if desc == nil {
-		return newUndefined()
+	if desc.isAccessorDescriptor() {
+		desc.set(vm, this, prop, desc, v)
+	} else {
+		newDesc := &propertyDescriptor{value: v, writable: true, enumerable: true, configurable: true}
+		this.defineOwnProperty(vm, prop, newDesc, throw)
 	}
-
-	return desc.set(vm, this, prop, desc, v)
 }
 
 func (this value) get(vm *vm, prop string) value {
-	if objectDebug {
-		log.Printf("Getting %s proto %s", prop, this.odata.prototype)
-	}
 	desc := this.getProperty(vm, prop)
 	if desc == nil {
 		return newUndefined()
 	}
 
-	return desc.get(vm, this, prop, desc)
+	if desc.isDataDescriptor() {
+		return desc.value
+	} else if desc.isAccessorDescriptor() {
+		return desc.get(vm, this, prop, desc)
+	}
+
+	panic("unreachable")
 }
 
 func (this value) getOwnProperty(vm *vm, prop string) *propertyDescriptor {
 	if objectDebug {
-		log.Printf("GetOwnProperty %s.%s", this, prop)
+		//log.Printf("GetOwnProperty %s.%s", this, prop)
 	}
 	for idx, _ := range this.odata.properties {
 		//log.Printf("Looking for %s found %s", prop, this.odata.properties[idx].name)
 		if this.odata.properties[idx].name == prop {
-			return &this.odata.properties[idx]
+			return this.odata.properties[idx]
 		}
 	}
 
@@ -129,28 +289,47 @@ type propertyDescriptor struct {
 	value        value // [[Value]] convenience
 	length       int
 	propIdx      int
+	writable     bool // [[Writable]]
 	enumerable   bool // [[Enumerable]]
 	configurable bool // [[Configurable]]
+}
+
+func (this *propertyDescriptor) isDataDescriptor() bool {
+	// ### does this match the spec? hmm..
+	return this.get == nil && this.set == nil
+}
+
+func (this *propertyDescriptor) isGenericDescriptor() bool {
+	if !this.isAccessorDescriptor() && !this.isDataDescriptor() {
+		return true
+	}
+
+	return false
+}
+
+func (this *propertyDescriptor) isAccessorDescriptor() bool {
+	return this.get != nil || this.set != nil
 }
 
 type objectData struct {
 	objectType   objectType
 	prototype    value
-	properties   []propertyDescriptor
+	properties   []*propertyDescriptor
 	callPtr      foFn // used for function object
 	constructPtr foFn // used for function object
+	extensible   bool // ### is this needed?
 }
 
-const objectDebug = false
+const objectDebug = true
 
 func newNumberObject(n float64) value {
-	v := value{OBJECT, make([]byte, unsafe.Sizeof(n)), &objectData{NUMBER_OBJECT, value{}, nil, nil, nil}}
+	v := value{OBJECT, make([]byte, unsafe.Sizeof(n)), &objectData{NUMBER_OBJECT, value{}, nil, nil, nil, true}}
 	*(*float64)(unsafe.Pointer(&v.vdata[0])) = n
 	return v
 }
 
 func newFunctionObject(call foFn, construct foFn) value {
-	v := value{OBJECT, nil, &objectData{FUNCTION_OBJECT, value{}, nil, call, construct}}
+	v := value{OBJECT, nil, &objectData{FUNCTION_OBJECT, value{}, nil, call, construct, true}}
 	return v
 }
 

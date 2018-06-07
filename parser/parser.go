@@ -64,6 +64,74 @@ func (this *parser) parseArrayLiteral() *ArrayLiteral {
 	return n
 }
 
+func (this *parser) parseObjectProperty(currentObject *ObjectLiteral, propertyName Node, wantsGet bool, wantsSet bool) {
+	if wantsGet {
+		// get PropertyName() BlockStatement
+		// ### or should this be a function literal?
+		this.expect(LPAREN)
+		this.expect(RPAREN)
+		body := this.parseBlockStatement()
+		wantsGet = false
+		currentObject.Properties = append(currentObject.Properties, ObjectPropertyLiteral{Key: propertyName, Type: Get, X: body})
+	} else if wantsSet {
+		// set PropertyName(Identifier) BlockStatement
+		// ### the identifier here gets dropped. we should make this a function literal, presumably.
+		this.expect(LPAREN)
+		this.expect(IDENTIFIER)
+		this.expect(RPAREN)
+		body := this.parseBlockStatement()
+		wantsSet = false
+		currentObject.Properties = append(currentObject.Properties, ObjectPropertyLiteral{Key: propertyName, Type: Set, X: body})
+	} else {
+		this.expect(COLON)
+		x := this.parseAssignmentExpression()
+		currentObject.Properties = append(currentObject.Properties, ObjectPropertyLiteral{Key: propertyName, Type: Normal, X: x})
+	}
+
+	if this.stream.peek().tokenType == COMMA {
+		this.expect(COMMA)
+	}
+}
+
+func (this *parser) parseObjectLiteral() *ObjectLiteral {
+	tok := this.expect(LBRACE)
+	n := &ObjectLiteral{tok: tok}
+
+	wantsGet := false
+	wantsSet := false
+	parsingObject := true
+	for parsingObject {
+		switch this.stream.peek().tokenType {
+		case GET:
+			wantsGet = true
+			this.expect(GET)
+		case SET:
+			wantsSet = true
+			this.expect(SET)
+		case IDENTIFIER:
+			propertyName := &IdentifierLiteral{tok: this.expect(IDENTIFIER)}
+			this.parseObjectProperty(n, propertyName, wantsGet, wantsSet)
+			wantsGet = false
+			wantsSet = false
+		case STRING_LITERAL:
+			propertyName := &StringLiteral{tok: this.expect(STRING_LITERAL)}
+			this.parseObjectProperty(n, propertyName, wantsGet, wantsSet)
+			wantsGet = false
+			wantsSet = false
+		case NUMERIC_LITERAL:
+			propertyName := &NumericLiteral{tok: this.expect(NUMERIC_LITERAL)}
+			this.parseObjectProperty(n, propertyName, wantsGet, wantsSet)
+			wantsGet = false
+			wantsSet = false
+		case RBRACE:
+			this.expect(RBRACE)
+			parsingObject = false
+		}
+	}
+
+	return n
+}
+
 func (this *parser) parseMemberExpression() Node {
 	if this.stream.peek().tokenType == FUNCTION {
 		funcTok := this.expect(FUNCTION)
@@ -390,6 +458,8 @@ func (this *parser) parsePrimaryExpression() Node {
 		return &NullLiteral{tok: this.expect(NULL)}
 	case LBRACKET:
 		return this.parseArrayLiteral()
+	case LBRACE:
+		return this.parseObjectLiteral()
 	case LPAREN:
 		this.expect(LPAREN)
 		expr := this.parseExpression()
@@ -579,13 +649,12 @@ func Parse(code string, ignoreComments bool) Node {
 	np := parser{tokenStream{stream: &byteStream{code: code}, ignoreComments: ignoreComments}}
 	ret := np.parseProgram()
 	if parseDebug {
-		log.Printf("%s", recursivelyPrint(ret))
+		log.Printf("%s", RecursivelyPrint(ret))
 	}
 	return ret
 }
 
-// ### finish this and move it to parser.go
-func recursivelyPrint(node Node) string {
+func RecursivelyPrint(node Node) string {
 	if node == nil {
 		return "(nil)"
 	}
@@ -593,160 +662,178 @@ func recursivelyPrint(node Node) string {
 	case *Program:
 		p := "program:\n"
 		for _, c := range n.Body() {
-			p += recursivelyPrint(c)
+			p += RecursivelyPrint(c)
 		}
 		return p
 	case *IfStatement:
 		if n.ElseStmt != nil {
-			return fmt.Sprintf("If %s then %s else %s", recursivelyPrint(n.ConditionExpr), recursivelyPrint(n.ThenStmt), recursivelyPrint(n.ElseStmt))
+			return fmt.Sprintf("If %s then %s else %s", RecursivelyPrint(n.ConditionExpr), RecursivelyPrint(n.ThenStmt), RecursivelyPrint(n.ElseStmt))
 		} else {
-			return fmt.Sprintf("If %s then %s", recursivelyPrint(n.ConditionExpr), recursivelyPrint(n.ThenStmt))
+			return fmt.Sprintf("If %s then %s", RecursivelyPrint(n.ConditionExpr), RecursivelyPrint(n.ThenStmt))
 		}
 	case *ReturnStatement:
-		return fmt.Sprintf("Return(%s)", recursivelyPrint(n.X))
+		return fmt.Sprintf("Return(%s)", RecursivelyPrint(n.X))
 	case *BlockStatement:
 		p := "{:\n"
 		for _, c := range n.Body {
-			p += recursivelyPrint(c) + "\n"
+			p += RecursivelyPrint(c) + "\n"
 		}
 		p += "}\n"
 		return p
 	case *ExpressionStatement:
-		return fmt.Sprintf("(unused) %s", recursivelyPrint(n.X))
+		return fmt.Sprintf("(unused) %s", RecursivelyPrint(n.X))
 	case *ArrayLiteral:
 		p := "[:\n"
 		for _, c := range n.vals {
-			p += recursivelyPrint(c) + "\n"
+			p += RecursivelyPrint(c) + "\n"
 		}
 		p += "]\n"
 		return p
 	case *FunctionExpression:
 		args := ""
 		for _, arg := range n.Parameters {
-			args += recursivelyPrint(arg) + ", "
+			args += RecursivelyPrint(arg) + ", "
 		}
 		if len(args) > 0 {
 			args = args[:len(args)-2]
 		}
 		if n.Identifier != nil {
-			return fmt.Sprintf("function %s(%s) %s", recursivelyPrint(n.Identifier), args, recursivelyPrint(n.Body))
+			return fmt.Sprintf("function %s(%s) %s", RecursivelyPrint(n.Identifier), args, RecursivelyPrint(n.Body))
 		} else {
-			return fmt.Sprintf("function(%s) %s", args, recursivelyPrint(n.Body))
+			return fmt.Sprintf("function(%s) %s", args, RecursivelyPrint(n.Body))
 		}
 	case *NewExpression:
-		return fmt.Sprintf("new %s", recursivelyPrint(n.X))
+		return fmt.Sprintf("new %s", RecursivelyPrint(n.X))
 	case *DotMemberExpression:
-		return fmt.Sprintf("%s.%s", recursivelyPrint(n.X), recursivelyPrint(n.Name))
+		return fmt.Sprintf("%s.%s", RecursivelyPrint(n.X), RecursivelyPrint(n.Name))
 	case *BracketMemberExpression:
-		return fmt.Sprintf("%s[%s]", recursivelyPrint(n.left), recursivelyPrint(n.right))
+		return fmt.Sprintf("%s[%s]", RecursivelyPrint(n.left), RecursivelyPrint(n.right))
 	case *CallExpression:
 		args := ""
 		for _, arg := range n.Arguments {
-			args += fmt.Sprintf("%s, ", recursivelyPrint(arg))
+			args += fmt.Sprintf("%s, ", RecursivelyPrint(arg))
 		}
 		if len(args) > 0 {
 			args = args[:len(args)-2]
 		}
-		return fmt.Sprintf("CALL %s(%s)", recursivelyPrint(n.X), args)
+		return fmt.Sprintf("CALL %s(%s)", RecursivelyPrint(n.X), args)
 	case *UnaryExpression:
 		if n.postfix {
 			if n.token().tokenType == INCREMENT {
-				return fmt.Sprintf("%s++", recursivelyPrint(n.X))
+				return fmt.Sprintf("%s++", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == DECREMENT {
-				return fmt.Sprintf("%s--", recursivelyPrint(n.X))
+				return fmt.Sprintf("%s--", RecursivelyPrint(n.X))
 			} else {
 				panic(fmt.Sprintf("unknown postfix op %s", n.token().tokenType))
 			}
 		} else {
 			if n.token().tokenType == INCREMENT {
-				return fmt.Sprintf("++%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("++%s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == DECREMENT {
-				return fmt.Sprintf("--%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("--%s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == DELETE {
-				return fmt.Sprintf("delete %s", recursivelyPrint(n.X))
+				return fmt.Sprintf("delete %s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == TYPEOF {
-				return fmt.Sprintf("typeof %s", recursivelyPrint(n.X))
+				return fmt.Sprintf("typeof %s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == VOID {
-				return fmt.Sprintf("void %s", recursivelyPrint(n.X))
+				return fmt.Sprintf("void %s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == MINUS {
-				return fmt.Sprintf("-%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("-%s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == PLUS {
-				return fmt.Sprintf("+%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("+%s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == BITWISE_NOT {
-				return fmt.Sprintf("~%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("~%s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == BITWISE_XOR {
-				return fmt.Sprintf("^%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("^%s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == BITWISE_AND {
-				return fmt.Sprintf("&%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("&%s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == BITWISE_OR {
-				return fmt.Sprintf("|%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("|%s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == LOGICAL_NOT {
-				return fmt.Sprintf("!%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("!%s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == LOGICAL_AND {
-				return fmt.Sprintf("&&%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("&&%s", RecursivelyPrint(n.X))
 			} else if n.token().tokenType == LOGICAL_OR {
-				return fmt.Sprintf("||%s", recursivelyPrint(n.X))
+				return fmt.Sprintf("||%s", RecursivelyPrint(n.X))
 			} else {
 				panic(fmt.Sprintf("unknown prefix op %s", n.token().tokenType))
 			}
 		}
 		return ";"
 	case *ConditionalExpression:
-		return fmt.Sprintf("%s ? %s : %s", recursivelyPrint(n.X), recursivelyPrint(n.Then), recursivelyPrint(n.Else))
+		return fmt.Sprintf("%s ? %s : %s", RecursivelyPrint(n.X), RecursivelyPrint(n.Then), RecursivelyPrint(n.Else))
 	case *BinaryExpression:
 		switch n.token().tokenType {
 		case MULTIPLY:
-			return fmt.Sprintf("%s * %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s * %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case DIVIDE:
-			return fmt.Sprintf("%s / %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s / %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case MODULUS:
-			return fmt.Sprintf("%s %% %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s %% %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case PLUS:
-			return fmt.Sprintf("%s + %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s + %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case MINUS:
-			return fmt.Sprintf("%s - %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s - %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case LEFT_SHIFT:
-			return fmt.Sprintf("%s << %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s << %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case RIGHT_SHIFT:
-			return fmt.Sprintf("%s >> %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s >> %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case UNSIGNED_RIGHT_SHIFT:
-			return fmt.Sprintf("%s >>> %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s >>> %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case EQUALS:
-			return fmt.Sprintf("%s == %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s == %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case NOT_EQUALS:
-			return fmt.Sprintf("%s != %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s != %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case STRICT_EQUALS:
-			return fmt.Sprintf("%s === %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s === %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case STRICT_NOT_EQUALS:
-			return fmt.Sprintf("%s !== %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s !== %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case BITWISE_AND:
-			return fmt.Sprintf("%s & %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s & %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case BITWISE_XOR:
-			return fmt.Sprintf("%s ^ %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s ^ %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case BITWISE_OR:
-			return fmt.Sprintf("%s | %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s | %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case LOGICAL_AND:
-			return fmt.Sprintf("%s && %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s && %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case LOGICAL_OR:
-			return fmt.Sprintf("%s || %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s || %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case ASSIGNMENT:
-			return fmt.Sprintf("%s = %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s = %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case LESS_THAN:
-			return fmt.Sprintf("%s < %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s < %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case GREATER_THAN:
-			return fmt.Sprintf("%s > %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s > %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case LESS_EQ:
-			return fmt.Sprintf("%s <= %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s <= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case GREATER_EQ:
-			return fmt.Sprintf("%s >= %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s >= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case INSTANCEOF:
-			return fmt.Sprintf("%s instanceof %s", recursivelyPrint(n.Left), recursivelyPrint(n.Right))
+			return fmt.Sprintf("%s instanceof %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		default:
 			panic(fmt.Sprintf("unknown binary expression %s", node.token().tokenType))
 		}
 
 	case *EmptyStatement:
 		return ";"
+	case *ObjectLiteral:
+		buf := ""
+		for _, prop := range n.Properties {
+			if prop.Type == Get {
+				buf += "get "
+			} else if prop.Type == Set {
+				buf += "set "
+			}
+
+			buf += RecursivelyPrint(prop.Key)
+			buf += ": "
+			buf += RecursivelyPrint(prop.X)
+			buf += ", "
+		}
+		if len(buf) > 0 {
+			buf = buf[:len(buf)-2]
+		}
+		return fmt.Sprintf("{ %s }", buf)
 	case *TrueLiteral:
 		return "true"
 	case *FalseLiteral:
@@ -762,20 +849,20 @@ func recursivelyPrint(node Node) string {
 	case *NullLiteral:
 		return "null"
 	case *DoWhileStatement:
-		return fmt.Sprintf("do %s while %s", recursivelyPrint(n.Body), recursivelyPrint(n.X))
+		return fmt.Sprintf("do %s while %s", RecursivelyPrint(n.Body), RecursivelyPrint(n.X))
 	case *WhileStatement:
-		return fmt.Sprintf("while %s %s", recursivelyPrint(n.X), recursivelyPrint(n.Body))
+		return fmt.Sprintf("while %s %s", RecursivelyPrint(n.X), RecursivelyPrint(n.Body))
 	case *ForStatement:
-		return fmt.Sprintf("for (%s; %s; %s) %s", recursivelyPrint(n.Initializer), recursivelyPrint(n.Test), recursivelyPrint(n.Update), recursivelyPrint(n.Body))
+		return fmt.Sprintf("for (%s; %s; %s) %s", RecursivelyPrint(n.Initializer), RecursivelyPrint(n.Test), RecursivelyPrint(n.Update), RecursivelyPrint(n.Body))
 	case *VariableStatement:
 		buf := "var "
 		for idx, _ := range n.Vars {
 			v := n.Vars[idx]
 			i := n.Initializers[idx]
-			buf += recursivelyPrint(v)
+			buf += RecursivelyPrint(v)
 			if i != nil {
 				buf += " = "
-				buf += recursivelyPrint(i)
+				buf += RecursivelyPrint(i)
 			}
 
 			buf += ", "

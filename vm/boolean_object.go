@@ -35,7 +35,7 @@ var booleanProto value
 func newBooleanObject(b bool) value {
 	v := newBool(b)
 	v.vtype = OBJECT
-	v.odata = &objectData{BOOLEAN_OBJECT, value{}, nil, nil, nil}
+	v.odata = &objectData{BOOLEAN_OBJECT, value{}, nil, nil, nil, true}
 	v.odata.prototype = booleanProto
 	return v
 }

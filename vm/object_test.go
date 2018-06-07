@@ -1,0 +1,24 @@
+package vm
+
+import (
+	"testing"
+)
+
+func TestObject(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = {}; a.toString()",
+			out: newString("[object Object]"),
+		},
+		simpleVMTest{
+			in:  "var a = {abc: 5}; a.abc",
+			out: newNumber(5),
+		},
+		simpleVMTest{
+			in:  `var a = {abc: 5, def: "test"}; a.def`,
+			out: newString("test"),
+		},
+	}
+
+	runSimpleVMTestHelper(t, tests)
+}

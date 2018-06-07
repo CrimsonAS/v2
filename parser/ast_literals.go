@@ -39,6 +39,10 @@ func (this *NumericLiteral) token() token {
 	return this.tok
 }
 
+func (this *NumericLiteral) String() string {
+	return this.tok.value
+}
+
 func (this *NumericLiteral) Float64Value() float64 {
 	v, _ := strconv.ParseFloat(this.tok.value, 64)
 	return v
@@ -113,5 +117,29 @@ type ArrayLiteral struct {
 }
 
 func (this *ArrayLiteral) token() token {
+	return this.tok
+}
+
+type ObjectPropertyType int
+
+const (
+	Normal ObjectPropertyType = iota
+	Get
+	Set
+)
+
+type ObjectPropertyLiteral struct {
+	Key  Node
+	Type ObjectPropertyType
+	X    Node
+}
+
+type ObjectLiteral struct {
+	Node
+	tok        token
+	Properties []ObjectPropertyLiteral
+}
+
+func (this *ObjectLiteral) token() token {
 	return this.tok
 }

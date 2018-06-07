@@ -103,6 +103,8 @@ const (
 	DO
 	WHILE
 	FOR
+	GET
+	SET
 
 	// Flow control
 	IF
@@ -229,6 +231,10 @@ func classifyIdentifier(id string) (TokenType, bool) {
 		return DO, false
 	case "while":
 		return WHILE, false
+	case "get":
+		return GET, false
+	case "set":
+		return SET, false
 	case "for":
 		return FOR, false
 	case "var":

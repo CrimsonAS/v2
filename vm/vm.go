@@ -189,6 +189,18 @@ func (this *vm) Run() value {
 				b = true
 			}
 			this.currentFrame.data_stack.push(newBool(b))
+		case NEW_OBJECT:
+			o := newObject()
+			o.odata.prototype = objectProto
+			this.currentFrame.data_stack.push(o)
+		case DEFINE_PROPERTY:
+			val := this.currentFrame.data_stack.pop()
+			key := this.currentFrame.data_stack.pop()
+			obj := this.currentFrame.data_stack.peek()
+			pd := &propertyDescriptor{name: key.toString(), value: val}
+			obj.defineOwnProperty(this, pd.name, pd, false)
+		case END_OBJECT:
+			this.currentFrame.data_stack.pop()
 		case PUSH_UNDEFINED:
 			this.currentFrame.data_stack.push(newUndefined())
 		case PUSH_NULL:

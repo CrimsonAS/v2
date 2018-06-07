@@ -36,7 +36,7 @@ import (
 func newStringObject(s string) value {
 	v := newString(s)
 	v.vtype = OBJECT
-	v.odata = &objectData{STRING_OBJECT, value{}, nil, nil, nil}
+	v.odata = &objectData{STRING_OBJECT, value{}, nil, nil, nil, true}
 	v.odata.prototype = stringProto
 	return v
 }

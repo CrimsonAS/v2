@@ -100,6 +100,131 @@ func TestArrayLiterals(t *testing.T) {
 	assert.Equal(t, Parse("[true,   false,]", false), ep6)
 }
 
+func TestObjectLiterals(t *testing.T) {
+	ep1 := &Program{body: []Node{&VariableStatement{
+		tok: token{tokenType: VAR, value: "var"},
+		Vars: []*IdentifierLiteral{
+			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "v", pos: 4, col: 4}},
+		},
+		Initializers: []Node{
+			&ObjectLiteral{tok: token{tokenType: LBRACE, value: "", pos: 8, col: 8}},
+		},
+	}}}
+	assert.Equal(t, Parse("var v = {}", false), ep1)
+
+	ep2 := &Program{body: []Node{&VariableStatement{
+		tok: token{tokenType: VAR, value: "var"},
+		Vars: []*IdentifierLiteral{
+			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "v", pos: 4, col: 4}},
+		},
+		Initializers: []Node{
+			&ObjectLiteral{
+				tok: token{tokenType: LBRACE, value: "", pos: 8, col: 8},
+				Properties: []ObjectPropertyLiteral{
+					ObjectPropertyLiteral{
+						Key: &StringLiteral{tok: token{tokenType: STRING_LITERAL, value: "a", col: 9, pos: 9}},
+						X: &NumericLiteral{
+							tok: token{tokenType: NUMERIC_LITERAL, value: "1", col: 14, pos: 14},
+						},
+					},
+				},
+			},
+		},
+	}}}
+	assert.Equal(t, Parse(`var v = {"a": 1}`, false), ep2)
+
+	ep3 := &Program{body: []Node{&VariableStatement{
+		tok: token{tokenType: VAR, value: "var"},
+		Vars: []*IdentifierLiteral{
+			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "v", pos: 4, col: 4}},
+		},
+		Initializers: []Node{
+			&ObjectLiteral{
+				tok: token{tokenType: LBRACE, value: "", pos: 8, col: 8},
+				Properties: []ObjectPropertyLiteral{
+					ObjectPropertyLiteral{
+						Key: &NumericLiteral{tok: token{tokenType: NUMERIC_LITERAL, value: "3", col: 9, pos: 9}},
+						X: &NumericLiteral{
+							tok: token{tokenType: NUMERIC_LITERAL, value: "1", col: 14, pos: 14},
+						},
+					},
+				},
+			},
+		},
+	}}}
+	assert.Equal(t, Parse(`var v = {3  : 1}`, false), ep3)
+
+	ep4 := &Program{body: []Node{&VariableStatement{
+		tok: token{tokenType: VAR, value: "var"},
+		Vars: []*IdentifierLiteral{
+			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "v", pos: 4, col: 4}},
+		},
+		Initializers: []Node{
+			&ObjectLiteral{
+				tok: token{tokenType: LBRACE, value: "", pos: 8, col: 8},
+				Properties: []ObjectPropertyLiteral{
+					ObjectPropertyLiteral{
+						Key: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a", col: 9, pos: 9}},
+						X: &NumericLiteral{
+							tok: token{tokenType: NUMERIC_LITERAL, value: "1", col: 14, pos: 14},
+						},
+					},
+				},
+			},
+		},
+	}}}
+	assert.Equal(t, Parse(`var v = {a  : 1}`, false), ep4)
+
+	ep5 := &Program{body: []Node{&VariableStatement{
+		tok: token{tokenType: VAR, value: "var"},
+		Vars: []*IdentifierLiteral{
+			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "v", pos: 4, col: 4}},
+		},
+		Initializers: []Node{
+			&ObjectLiteral{
+				tok: token{tokenType: LBRACE, value: "", pos: 8, col: 8},
+				Properties: []ObjectPropertyLiteral{
+					ObjectPropertyLiteral{
+						Key: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a", col: 9, pos: 9}},
+						X: &NumericLiteral{
+							tok: token{tokenType: NUMERIC_LITERAL, value: "1", col: 12, pos: 12},
+						},
+					},
+					ObjectPropertyLiteral{
+						Key: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 15, pos: 15}},
+						X: &NumericLiteral{
+							tok: token{tokenType: NUMERIC_LITERAL, value: "2", col: 18, pos: 18},
+						},
+					},
+				},
+			},
+		},
+	}}}
+	assert.Equal(t, Parse(`var v = {a: 1, b: 2}`, false), ep5)
+
+	ep6 := &Program{body: []Node{&VariableStatement{
+		tok: token{tokenType: VAR, value: "var"},
+		Vars: []*IdentifierLiteral{
+			&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "v", pos: 4, col: 4}},
+		},
+		Initializers: []Node{
+			&ObjectLiteral{
+				tok: token{tokenType: LBRACE, value: "", pos: 8, col: 8},
+				Properties: []ObjectPropertyLiteral{
+					ObjectPropertyLiteral{
+						Type: Get,
+						Key:  &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a", col: 13, pos: 13}},
+						X: &BlockStatement{
+							tok: token{tokenType: LBRACE, col: 17, pos: 17},
+						},
+					},
+				},
+			},
+		},
+	}}}
+	assert.Equal(t, Parse(`var v = {get a() {}}`, false), ep6)
+}
+
 func TestDotExpression(t *testing.T) {
 	ep1 := &Program{body: []Node{&ExpressionStatement{X: &DotMemberExpression{tok: token{tokenType: DOT, value: "", pos: 1, col: 1},
 		X:    &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a", pos: 0, col: 0}},
@@ -115,5 +240,5 @@ func TestDotExpression(t *testing.T) {
 		Arguments: nil,
 	}}}}
 	// not giving equal, for some reason
-	assert.Equal(t, recursivelyPrint(Parse("a.b()", false)), recursivelyPrint(ep2))
+	assert.Equal(t, RecursivelyPrint(Parse("a.b()", false)), RecursivelyPrint(ep2))
 }

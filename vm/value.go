@@ -135,6 +135,11 @@ func (this value) asBool() bool {
 	switch this.vtype {
 	case BOOL:
 		return *(*bool)(unsafe.Pointer(&this.vdata[0]))
+	case OBJECT:
+		if this.odata.objectType == BOOLEAN_OBJECT {
+			return *(*bool)(unsafe.Pointer(&this.vdata[0]))
+		}
+		panic(fmt.Sprintf("can't convert strange object! %d", this.odata.objectType))
 	}
 	panic(fmt.Sprintf("can't convert! %s", this.vtype))
 }
@@ -151,6 +156,11 @@ func (this value) asString() string {
 	switch this.vtype {
 	case STRING:
 		return string(this.vdata)
+	case OBJECT:
+		if this.odata.objectType == STRING_OBJECT {
+			return string(this.vdata)
+		}
+		panic(fmt.Sprintf("can't convert strange object! %d", this.odata.objectType))
 	}
 	panic(fmt.Sprintf("can't convert! %s", this.vtype))
 }
@@ -226,19 +236,19 @@ func (this value) toNumber() float64 {
 	panic("unreachable")
 }
 
-func (this value) toInteger() float64 { // ### return type ok?
+func (this value) toInteger() int {
 	number := this.toNumber()
 	if math.IsNaN(number) {
 		return +0
 	}
 	if int(number) == 0 || math.IsInf(number, 0) {
-		return number
+		return int(number)
 	}
 
 	if number > 0 {
-		return 1 * math.Floor(math.Abs(number))
+		return int(1 * math.Floor(math.Abs(number)))
 	} else {
-		return -1 * math.Floor(math.Abs(number))
+		return int(-1 * math.Floor(math.Abs(number)))
 	}
 }
 
@@ -272,7 +282,12 @@ func (this value) toString() string {
 	case STRING:
 		return this.asString()
 	case OBJECT:
+		if this.odata.objectType == STRING_OBJECT {
+			return this.asString()
+		}
+
 		// not according to ES spec...
+		// should call toString() method?
 		return "[object]"
 		//v := this.toPrimitive()
 		//return v.toString()

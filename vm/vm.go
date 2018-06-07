@@ -65,6 +65,7 @@ type vm struct {
 	ignoreReturn  bool
 	isNew         int
 	canConsume    int
+	thisArg       value
 }
 
 const lookupDebug = false
@@ -91,15 +92,16 @@ func makeStackFrame(preparedData stack, returnAddr int, outer *stackFrame) stack
 func New(code string) *vm {
 	ast := parser.Parse(code, true /* ignore comments */)
 
-	vm := vm{[]stackFrame{}, nil, []opcode{}, 0, nil, value{}, false, 0, 0}
+	vm := vm{[]stackFrame{}, nil, []opcode{}, 0, nil, value{}, false, 0, 0, value{}}
 	vm.stack = []stackFrame{makeStackFrame(stack{}, 0, nil)}
 	vm.currentFrame = &vm.stack[0]
 	vm.code = vm.generateCode(ast)
 
-	vm.defineVar(appendStringtable("console"), defineConsoleObject())
-	vm.defineVar(appendStringtable("Math"), defineMathObject())
-	vm.defineVar(appendStringtable("Boolean"), defineBooleanCtor())
-	vm.defineVar(appendStringtable("String"), defineStringCtor())
+	vm.defineVar(appendStringtable("Object"), defineObjectCtor(&vm))
+	vm.defineVar(appendStringtable("console"), defineConsoleObject(&vm))
+	vm.defineVar(appendStringtable("Math"), defineMathObject(&vm))
+	vm.defineVar(appendStringtable("Boolean"), defineBooleanCtor(&vm))
+	vm.defineVar(appendStringtable("String"), defineStringCtor(&vm))
 
 	return &vm
 }
@@ -283,7 +285,7 @@ func (this *vm) Run() value {
 			*sv = v
 		case LOAD_MEMBER:
 			v := this.currentFrame.data_stack.pop()
-			memb := v.get(stringtable[op.odata.asInt()])
+			memb := v.get(this, stringtable[op.odata.asInt()])
 			if execDebug {
 				log.Printf("LOAD_MEMBER %s.%s got %+v", v, stringtable[op.odata.asInt()], memb)
 			}
@@ -296,6 +298,7 @@ func (this *vm) Run() value {
 			if execDebug {
 				log.Printf("Loading %s from %d gave %s", stringtable[op.odata.asInt()], op.odata.asInt(), *sv)
 			}
+			this.thisArg = *sv
 			this.currentFrame.data_stack.push(*sv)
 		default:
 			panic(fmt.Sprintf("unhandled opcode %+v", op))
@@ -324,9 +327,9 @@ func (this *vm) handleCall(op opcode, isNew bool) {
 
 	var rval value
 	if isNew {
-		rval = fn.construct(this, builtinArgs)
+		rval = fn.construct(this, this.thisArg, builtinArgs)
 	} else {
-		rval = fn.call(this, builtinArgs)
+		rval = fn.call(this, this.thisArg, builtinArgs)
 	}
 
 	if this.ignoreReturn {

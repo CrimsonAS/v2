@@ -4,9 +4,9 @@ import (
 	"log"
 )
 
-func defineConsoleObject() value {
+func defineConsoleObject(vm *vm) value {
 	consoleO := newObject()
-	consoleO.set("log", newFunctionObject(console_log, nil))
+	consoleO.defineDefaultProperty(vm, "log", newFunctionObject(console_log, nil), 0)
 	return consoleO
 }
 

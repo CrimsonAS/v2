@@ -5,36 +5,37 @@ import (
 	"math/rand"
 )
 
-func defineMathObject() value {
+func defineMathObject(vm *vm) value {
 	mathO := newObject()
+	mathO.odata.prototype = objectProto
 
-	mathO.set("E", newNumber(2.7182818284590452354))
-	mathO.set("LN10", newNumber(2.302585092994046))
-	mathO.set("LN2", newNumber(0.6931471805599453))
-	mathO.set("LOG2E", newNumber(1.4426950408889634))
-	mathO.set("LO10E", newNumber(0.4342944819032518))
-	mathO.set("PI", newNumber(3.1415926535897932))
-	mathO.set("SQRT1_2", newNumber(0.7071067811865476))
-	mathO.set("SQRT2", newNumber(1.4142135623730951))
+	mathO.defineReadonlyProperty(vm, "E", newNumber(2.7182818284590452354), 1)
+	mathO.defineReadonlyProperty(vm, "LN10", newNumber(2.302585092994046), 1)
+	mathO.defineReadonlyProperty(vm, "LN2", newNumber(0.6931471805599453), 1)
+	mathO.defineReadonlyProperty(vm, "LOG2E", newNumber(1.4426950408889634), 1)
+	mathO.defineReadonlyProperty(vm, "LO10E", newNumber(0.4342944819032518), 1)
+	mathO.defineReadonlyProperty(vm, "PI", newNumber(3.1415926535897932), 1)
+	mathO.defineReadonlyProperty(vm, "SQRT1_2", newNumber(0.7071067811865476), 1)
+	mathO.defineReadonlyProperty(vm, "SQRT2", newNumber(1.4142135623730951), 1)
 
-	mathO.set("abs", newFunctionObject(math_abs, nil))
-	mathO.set("acos", newFunctionObject(math_acos, nil))
-	mathO.set("asin", newFunctionObject(math_asin, nil))
-	mathO.set("atan", newFunctionObject(math_atan, nil))
+	mathO.defineDefaultProperty(vm, "abs", newFunctionObject(math_abs, nil), 1)
+	mathO.defineDefaultProperty(vm, "acos", newFunctionObject(math_acos, nil), 1)
+	mathO.defineDefaultProperty(vm, "asin", newFunctionObject(math_asin, nil), 1)
+	mathO.defineDefaultProperty(vm, "atan", newFunctionObject(math_atan, nil), 1)
 	// atan2
-	mathO.set("ceil", newFunctionObject(math_ceil, nil))
-	mathO.set("cos", newFunctionObject(math_cos, nil))
-	mathO.set("exp", newFunctionObject(math_exp, nil))
-	mathO.set("floor", newFunctionObject(math_floor, nil))
-	mathO.set("log", newFunctionObject(math_log, nil))
-	mathO.set("max", newFunctionObject(math_max, nil))
-	mathO.set("min", newFunctionObject(math_min, nil))
+	mathO.defineDefaultProperty(vm, "ceil", newFunctionObject(math_ceil, nil), 1)
+	mathO.defineDefaultProperty(vm, "cos", newFunctionObject(math_cos, nil), 1)
+	mathO.defineDefaultProperty(vm, "exp", newFunctionObject(math_exp, nil), 1)
+	mathO.defineDefaultProperty(vm, "floor", newFunctionObject(math_floor, nil), 1)
+	mathO.defineDefaultProperty(vm, "log", newFunctionObject(math_log, nil), 1)
+	mathO.defineDefaultProperty(vm, "max", newFunctionObject(math_max, nil), 1)
+	mathO.defineDefaultProperty(vm, "min", newFunctionObject(math_min, nil), 1)
 	// pow
-	mathO.set("random", newFunctionObject(math_random, nil))
-	mathO.set("round", newFunctionObject(math_round, nil))
-	mathO.set("sin", newFunctionObject(math_sin, nil))
-	mathO.set("sqrt", newFunctionObject(math_sqrt, nil))
-	mathO.set("tan", newFunctionObject(math_tan, nil))
+	mathO.defineDefaultProperty(vm, "random", newFunctionObject(math_random, nil), 1)
+	mathO.defineDefaultProperty(vm, "round", newFunctionObject(math_round, nil), 1)
+	mathO.defineDefaultProperty(vm, "sin", newFunctionObject(math_sin, nil), 1)
+	mathO.defineDefaultProperty(vm, "sqrt", newFunctionObject(math_sqrt, nil), 1)
+	mathO.defineDefaultProperty(vm, "tan", newFunctionObject(math_tan, nil), 1)
 	return mathO
 }
 

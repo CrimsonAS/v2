@@ -65,11 +65,19 @@ func defineStringCtor(vm *vm) value {
 }
 
 func string_call(vm *vm, f value, args []value) value {
-	return newString(args[0].toString())
+	if len(args) > 0 {
+		return newString(args[0].toString())
+	} else {
+		return newString("")
+	}
 }
 
 func string_ctor(vm *vm, f value, args []value) value {
-	return newStringObject(args[0].toString())
+	if len(args) > 0 {
+		return newStringObject(args[0].toString())
+	} else {
+		return newStringObject("")
+	}
 }
 
 func string_prototype_toString(vm *vm, f value, args []value) value {

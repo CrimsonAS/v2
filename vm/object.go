@@ -143,11 +143,6 @@ type objectData struct {
 
 const objectDebug = false
 
-func newObject() value {
-	v := value{OBJECT, nil, &objectData{OBJECT_PLAIN, value{}, nil, nil, nil}}
-	return v
-}
-
 func newNumberObject(n float64) value {
 	v := value{OBJECT, make([]byte, unsafe.Sizeof(n)), &objectData{NUMBER_OBJECT, value{}, nil, nil, nil}}
 	*(*float64)(unsafe.Pointer(&v.vdata[0])) = n

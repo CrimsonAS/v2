@@ -124,6 +124,14 @@ func TestPrefixOperators(t *testing.T) {
 func TestSimple(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
+			in:  "undefined",
+			out: newUndefined(),
+		},
+		simpleVMTest{
+			in:  "null",
+			out: newNull(),
+		},
+		simpleVMTest{
 			in:  "2+3",
 			out: newNumber(5),
 		},

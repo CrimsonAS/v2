@@ -40,11 +40,14 @@ func TestStringObject(t *testing.T) {
 			in:  "var s = new String(\"hello\"); s.valueOf()",
 			out: newString("hello"),
 		},
-		// ### es5 8.7.1 GetValue(), we need to promote primitives to object
-		//simpleVMTest{
-		//	in:  "var s = String(\"hello\"); s.toString()",
-		//	out: newString("hello"),
-		//},
+		simpleVMTest{
+			in:  "var s = new String(); s.valueOf()",
+			out: newString(""),
+		},
+		simpleVMTest{
+			in:  "var s = String(\"hello\"); s.toString()",
+			out: newString("hello"),
+		},
 		simpleVMTest{
 			in:  "var s = new String(\"hello\"); s.charAt(0)",
 			out: newString("h"),

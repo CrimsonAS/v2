@@ -157,6 +157,19 @@ func (this value) asNull() value {
 	panic(fmt.Sprintf("can't convert! %s", this.vtype))
 }
 
+func (this value) hasPrimitiveBase() bool {
+	switch this.vtype {
+	case BOOL:
+		fallthrough
+	case STRING:
+		fallthrough
+	case NUMBER:
+		return true
+	}
+
+	return false
+}
+
 func (this value) asBool() bool {
 	switch this.vtype {
 	case BOOL:

@@ -57,29 +57,29 @@ const (
 	// a / b
 	DIVIDE
 
-	// 5
-	PUSH_NUMBER
+	// These all push a given value to the stack.
+	PUSH_UNDEFINED // undefined
+	PUSH_NULL      // null
+	PUSH_NUMBER    // 5
+	PUSH_BOOL      // true
+	PUSH_STRING    // "hello" (note: the string index is given via the odata)
 
-	// true
-	PUSH_BOOL
-
-	// "hello"
-	PUSH_STRING
-
-	// LOAD hello (from the stack frame)
+	// LOAD identifier
+	// Pushes a variable onto the stack.
+	// Note that this also sets the 'this' arg for calls.
 	LOAD
 
-	// LOAD member (from property of the object on the stack frame)
+	// Loads a member from the topmost stack item, and pushes it to the stack frame.
 	LOAD_MEMBER
 
-	// not used in codegen right now...
+	// Jump ip, relative to the current position.
 	JMP
 
-	// call(a)
+	// call/new call the topmost function object on the stack.
 	// the odata gives the argument count
-	// arguments are on the stack, as is the thing to call.
+	// arguments are on the stack as well.
 	CALL
-	NEW // new(a)
+	NEW
 
 	// used to tell the VM which function it's inside, for debug printing
 	// purposes.
@@ -158,8 +158,6 @@ func (this opcode) String() string {
 		return "DIV"
 	case DUP:
 		return "DUP"
-	case POP:
-		return "POP"
 	case INCREMENT:
 		return "INCREMENT"
 	case DECREMENT:
@@ -174,6 +172,10 @@ func (this opcode) String() string {
 		return "=="
 	case NOT_EQUALS:
 		return "!="
+	case PUSH_UNDEFINED:
+		return "PUSH undefined"
+	case PUSH_NULL:
+		return "PUSH null"
 	case PUSH_NUMBER:
 		return fmt.Sprintf("PUSH number(%f)", this.odata)
 	case PUSH_STRING:
@@ -279,8 +281,6 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		return codebuf
 	case *parser.ExpressionStatement:
 		codebuf = append(codebuf, this.generateCode(n.X)...)
-		// this seems to break tests... but why?
-		//codebuf = append(codebuf, simpleOp(POP))
 		return codebuf
 	case *parser.FunctionExpression:
 		this.funcsToDefine = append(this.funcsToDefine, n)
@@ -307,8 +307,13 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		codebuf = append(codebuf, newOpcode(PUSH_STRING, float64(sl)))
 		return codebuf
 	case *parser.IdentifierLiteral:
-		il := appendStringtable(n.String())
-		codebuf = append(codebuf, newOpcode(LOAD, float64(il)))
+		if n.String() == "undefined" {
+			// I have no idea why this is an identifier, but there you go
+			codebuf = append(codebuf, simpleOp(PUSH_UNDEFINED))
+		} else {
+			il := appendStringtable(n.String())
+			codebuf = append(codebuf, newOpcode(LOAD, float64(il)))
+		}
 		return codebuf
 	case *parser.NumericLiteral:
 		codebuf = append(codebuf, newOpcode(PUSH_NUMBER, n.Float64Value()))
@@ -318,6 +323,9 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 		return codebuf
 	case *parser.FalseLiteral:
 		codebuf = append(codebuf, newOpcode(PUSH_BOOL, 0))
+		return codebuf
+	case *parser.NullLiteral:
+		codebuf = append(codebuf, simpleOp(PUSH_NULL))
 		return codebuf
 	case *parser.UnaryExpression:
 		if n.IsPrefix() {

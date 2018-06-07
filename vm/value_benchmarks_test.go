@@ -68,6 +68,51 @@ func BenchmarkSimpleTypes(b *testing.B) {
 	})
 }
 
+func BenchmarkSimpleTypesFromVM(b *testing.B) {
+	b.Run("undefined", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New(`undefined`)
+			v.Run()
+		}
+	})
+	b.Run("null", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New("null")
+			v.Run()
+		}
+	})
+	b.Run("bool", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New("true")
+			v.Run()
+		}
+	})
+	b.Run("number", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New("1.0")
+			v.Run()
+		}
+	})
+	b.Run("string_empty", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New(`""`)
+			v.Run()
+		}
+	})
+	b.Run("string_1c", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New(`"a"`)
+			v.Run()
+		}
+	})
+	b.Run("string_5c", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New(`"hello"`)
+			v.Run()
+		}
+	})
+}
+
 func BenchmarkObjectTypes(b *testing.B) {
 	testfn := func(vm *vm, f value, args []value) value {
 		return newUndefined()
@@ -115,6 +160,15 @@ func BenchmarkObjectTypes(b *testing.B) {
 	b.Run("function_both", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			newFunctionObject(testfn, testfn)
+		}
+	})
+}
+
+func BenchmarkObjectFromSimpleType(b *testing.B) {
+	b.Run("string_5c", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New(`var s = "hello"; s.toString()`)
+			v.Run()
 		}
 	})
 }

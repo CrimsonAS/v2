@@ -189,6 +189,10 @@ func (this *vm) Run() value {
 				b = true
 			}
 			this.currentFrame.data_stack.push(newBool(b))
+		case PUSH_UNDEFINED:
+			this.currentFrame.data_stack.push(newUndefined())
+		case PUSH_NULL:
+			this.currentFrame.data_stack.push(newNull())
 		case PUSH_NUMBER:
 			this.currentFrame.data_stack.push(newNumber(op.odata.asFloat64()))
 		case PUSH_STRING:
@@ -287,10 +291,6 @@ func (this *vm) Run() value {
 		case DUP:
 			cv := this.currentFrame.data_stack.peek()
 			this.currentFrame.data_stack.push(cv)
-		case POP:
-			if len(this.currentFrame.data_stack.values) > 0 {
-				this.currentFrame.data_stack.pop()
-			}
 		case IN_FUNCTION:
 			// no-op, just for informative/debug purposes
 		case DECLARE:
@@ -311,6 +311,10 @@ func (this *vm) Run() value {
 			*sv = v
 		case LOAD_MEMBER:
 			v := this.currentFrame.data_stack.pop()
+			if v.hasPrimitiveBase() {
+				// Would be nice if we could do this at codegen time...
+				v = v.toObject()
+			}
 			memb := v.get(this, stringtable[op.odata.asInt()])
 			if execDebug {
 				log.Printf("LOAD_MEMBER %s.%s got %+v", v, stringtable[op.odata.asInt()], memb)

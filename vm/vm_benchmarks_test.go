@@ -27,6 +27,7 @@
 package vm
 
 import (
+	"github.com/dop251/goja"
 	"github.com/robertkrimen/otto"
 	"testing"
 )
@@ -110,6 +111,19 @@ func BenchmarkVM_Otto(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					vm := otto.New()
 					vm.Run(test.code)
+				}
+			})
+	}
+}
+
+func BenchmarkVM_Goja(b *testing.B) {
+	tests := vmBenchmarks()
+	for _, test := range tests {
+		b.Run(test.name,
+			func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					vm := goja.New()
+					vm.RunString(test.code)
 				}
 			})
 	}

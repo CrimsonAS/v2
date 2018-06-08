@@ -33,39 +33,10 @@ import (
 	"math"
 )
 
-type stack struct {
-	values []value
-}
-
-func (this *stack) push(v value) {
-	this.values = append(this.values, v)
-	//log.Printf("Pushed %s len %d", v, len(this.values))
-}
-
-func (this *stack) peek() value {
-	return this.values[len(this.values)-1]
-}
-
-func (this *stack) popSlice(length int) []value {
-	to := len(this.values)
-	from := to - length
-	ret := this.values[from:to]
-	this.values = this.values[:from]
-	//log.Printf("popSlice from %d to %d slice len %s values now %s", from, to, ret, this.values)
-	return ret
-}
-func (this *stack) pop() value {
-	v := this.peek()
-	this.values = this.values[:len(this.values)-1]
-	//log.Printf("Popped %s len %d", v, len(this.values))
-	return v
-}
-
 type stackFrame struct {
-	data_stack stack
-	retAddr    int
-	vars       map[int]value
-	outer      *stackFrame
+	retAddr int
+	vars    map[int]value
+	outer   *stackFrame
 }
 
 var stringtable []string
@@ -81,6 +52,7 @@ func appendStringtable(name string) int {
 }
 
 type vm struct {
+	data_stack    stack
 	stack         []stackFrame
 	currentFrame  *stackFrame
 	code          []opcode
@@ -133,15 +105,15 @@ func (this *vm) defineVar(name int, v value) {
 	this.currentFrame.vars[name] = v
 }
 
-func makeStackFrame(preparedData stack, returnAddr int, outer *stackFrame) stackFrame {
-	return stackFrame{data_stack: preparedData, vars: make(map[int]value), retAddr: returnAddr, outer: outer}
+func makeStackFrame(returnAddr int, outer *stackFrame) stackFrame {
+	return stackFrame{vars: make(map[int]value), retAddr: returnAddr, outer: outer}
 }
 
 func New(code string) *vm {
 	ast := parser.Parse(code, true /* ignore comments */)
 
-	vm := vm{[]stackFrame{}, nil, []opcode{}, 0, nil, nil, false, 0, 0, nil}
-	vm.stack = []stackFrame{makeStackFrame(stack{}, 0, nil)}
+	vm := vm{stack{}, []stackFrame{}, nil, []opcode{}, 0, nil, nil, false, 0, 0, nil}
+	vm.stack = []stackFrame{makeStackFrame(0, nil)}
 	vm.currentFrame = &vm.stack[0]
 	vm.code = vm.generateCode(ast)
 
@@ -172,7 +144,7 @@ func (this *vm) popStack(rval value) {
 	if len(this.stack) > 0 {
 		this.ip = this.currentFrame.retAddr
 		this.currentFrame = &this.stack[len(this.stack)-1]
-		this.currentFrame.data_stack.push(rval)
+		this.data_stack.push(rval)
 		if execDebug {
 			log.Printf("Returning %s up the stack", rval)
 			log.Printf("Stack now: %+v", this.stack)
@@ -213,55 +185,55 @@ func (this *vm) Run() value {
 			if op.odata != 0 {
 				b = true
 			}
-			this.currentFrame.data_stack.push(newBool(b))
+			this.data_stack.push(newBool(b))
 		case NEW_OBJECT:
 			o := newObject()
 			o.odata.prototype = &objectProto // ### belongs in newObject?
-			this.currentFrame.data_stack.push(o)
+			this.data_stack.push(o)
 		case DEFINE_PROPERTY:
-			val := this.currentFrame.data_stack.pop()
-			key := this.currentFrame.data_stack.pop()
-			obj := this.currentFrame.data_stack.peek().(valueObject)
+			val := this.data_stack.pop()
+			key := this.data_stack.pop()
+			obj := this.data_stack.peek().(valueObject)
 			pd := &propertyDescriptor{name: key.String(), value: val}
 			obj.defineOwnProperty(this, pd.name, pd, false)
 		case END_OBJECT:
-			this.currentFrame.data_stack.pop()
+			this.data_stack.pop()
 		case PUSH_UNDEFINED:
-			this.currentFrame.data_stack.push(newUndefined())
+			this.data_stack.push(newUndefined())
 		case PUSH_NULL:
-			this.currentFrame.data_stack.push(newNull())
+			this.data_stack.push(newNull())
 		case PUSH_NUMBER:
-			this.currentFrame.data_stack.push(newNumber(op.odata.asFloat64()))
+			this.data_stack.push(newNumber(op.odata.asFloat64()))
 		case PUSH_STRING:
-			this.currentFrame.data_stack.push(newString(stringtable[op.odata.asInt()]))
+			this.data_stack.push(newString(stringtable[op.odata.asInt()]))
 		case UPLUS:
-			val := this.currentFrame.data_stack.pop()
-			this.currentFrame.data_stack.push(newNumber(val.ToNumber()))
+			val := this.data_stack.pop()
+			this.data_stack.push(newNumber(val.ToNumber()))
 		case UMINUS:
-			expr := this.currentFrame.data_stack.pop()
+			expr := this.data_stack.pop()
 			oldVal := expr.ToNumber()
 			if math.IsNaN(oldVal) {
-				this.currentFrame.data_stack.push(newNumber(math.NaN()))
+				this.data_stack.push(newNumber(math.NaN()))
 			} else {
-				this.currentFrame.data_stack.push(newNumber(oldVal * -1))
+				this.data_stack.push(newNumber(oldVal * -1))
 			}
 		case UNOT:
-			expr := this.currentFrame.data_stack.pop()
+			expr := this.data_stack.pop()
 			oldVal := expr.ToBoolean()
 			if oldVal {
-				this.currentFrame.data_stack.push(newBool(false))
+				this.data_stack.push(newBool(false))
 			} else {
-				this.currentFrame.data_stack.push(newBool(true))
+				this.data_stack.push(newBool(true))
 			}
 		case INCREMENT:
-			v := this.currentFrame.data_stack.pop()
-			this.currentFrame.data_stack.push(newNumber(v.ToNumber() + 1))
+			v := this.data_stack.pop()
+			this.data_stack.push(newNumber(v.ToNumber() + 1))
 		case DECREMENT:
-			v := this.currentFrame.data_stack.pop()
-			this.currentFrame.data_stack.push(newNumber(v.ToNumber() - 1))
+			v := this.data_stack.pop()
+			this.data_stack.push(newNumber(v.ToNumber() - 1))
 		case ADD:
 			// ### could (should) specialize this in codegen for numeric types
-			vals := this.currentFrame.data_stack.popSlice(2)
+			vals := this.data_stack.popSlice(2)
 			vals[0] = valueToPrimitive(vals[0])
 			vals[1] = valueToPrimitive(vals[1])
 
@@ -275,38 +247,38 @@ func (this *vm) Run() value {
 				oneIsString = true
 			}
 			if oneIsString {
-				this.currentFrame.data_stack.push(newString(vals[1].String() + vals[0].String()))
+				this.data_stack.push(newString(vals[1].String() + vals[0].String()))
 			} else {
-				this.currentFrame.data_stack.push(newNumber(vals[1].ToNumber() + vals[0].ToNumber()))
+				this.data_stack.push(newNumber(vals[1].ToNumber() + vals[0].ToNumber()))
 			}
 		case SUB:
-			vals := this.currentFrame.data_stack.popSlice(2)
-			this.currentFrame.data_stack.push(newNumber(vals[1].ToNumber() - vals[0].ToNumber()))
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newNumber(vals[1].ToNumber() - vals[0].ToNumber()))
 		case MULTIPLY:
-			vals := this.currentFrame.data_stack.popSlice(2)
-			this.currentFrame.data_stack.push(newNumber(vals[1].ToNumber() * vals[0].ToNumber()))
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newNumber(vals[1].ToNumber() * vals[0].ToNumber()))
 		case DIVIDE:
-			vals := this.currentFrame.data_stack.popSlice(2)
-			this.currentFrame.data_stack.push(newNumber(vals[1].ToNumber() / vals[0].ToNumber()))
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newNumber(vals[1].ToNumber() / vals[0].ToNumber()))
 		case LESS_THAN:
-			vals := this.currentFrame.data_stack.popSlice(2)
-			this.currentFrame.data_stack.push(newBool(vals[1].ToNumber() < vals[0].ToNumber()))
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newBool(vals[1].ToNumber() < vals[0].ToNumber()))
 		case GREATER_THAN:
-			vals := this.currentFrame.data_stack.popSlice(2)
-			this.currentFrame.data_stack.push(newBool(vals[1].ToNumber() > vals[0].ToNumber()))
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newBool(vals[1].ToNumber() > vals[0].ToNumber()))
 		case EQUALS:
-			vals := this.currentFrame.data_stack.popSlice(2)
-			this.currentFrame.data_stack.push(newBool(vals[1].ToNumber() == vals[0].ToNumber()))
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newBool(vals[1].ToNumber() == vals[0].ToNumber()))
 		case NOT_EQUALS:
-			vals := this.currentFrame.data_stack.popSlice(2)
-			this.currentFrame.data_stack.push(newBool(vals[1].ToNumber() != vals[0].ToNumber()))
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newBool(vals[1].ToNumber() != vals[0].ToNumber()))
 		case LESS_THAN_EQ:
-			vals := this.currentFrame.data_stack.popSlice(2)
-			this.currentFrame.data_stack.push(newBool(vals[1].ToNumber() <= vals[0].ToNumber()))
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newBool(vals[1].ToNumber() <= vals[0].ToNumber()))
 		case JMP:
 			this.ip += op.odata.asInt()
 		case JNE:
-			test := this.currentFrame.data_stack.pop()
+			test := this.data_stack.pop()
 
 			if op.odata.asInt() == 0 {
 				panic("JNE 0 is an infinite loop")
@@ -329,26 +301,26 @@ func (this *vm) Run() value {
 			// can't inline this to popStack, because the builtin case doesn't
 			// have a value pushed onto the data_stack.
 			var rval value
-			if len(this.currentFrame.data_stack.values) > 0 {
-				rval = this.currentFrame.data_stack.pop()
+			if len(this.data_stack.values) > 0 {
+				rval = this.data_stack.pop()
 			}
 
 			this.popStack(rval)
 		case DUP:
-			cv := this.currentFrame.data_stack.peek()
-			this.currentFrame.data_stack.push(cv)
+			cv := this.data_stack.peek()
+			this.data_stack.push(cv)
 		case IN_FUNCTION:
 			// no-op, just for informative/debug purposes
 		case DECLARE:
 			this.defineVar(op.odata.asInt(), nil)
 		case STORE:
-			v := this.currentFrame.data_stack.pop()
+			v := this.data_stack.pop()
 			ok := this.setVar(op.odata.asInt(), v)
 			if !ok {
 				panic("var not found")
 			}
 		case LOAD_MEMBER:
-			v := this.currentFrame.data_stack.pop()
+			v := this.data_stack.pop()
 			var vo valueObject
 			if v.hasPrimitiveBase() {
 				// Would be nice if we could do this at codegen time...
@@ -360,14 +332,14 @@ func (this *vm) Run() value {
 			if execDebug {
 				log.Printf("LOAD_MEMBER %s.%s got %+v", vo, stringtable[op.odata.asInt()], memb)
 			}
-			this.currentFrame.data_stack.push(memb)
+			this.data_stack.push(memb)
 		case LOAD:
 			sv, ok := this.findVar(op.odata.asInt())
 			if !ok {
 				panic("var not found")
 			}
 			this.thisArg = sv
-			this.currentFrame.data_stack.push(sv)
+			this.data_stack.push(sv)
 		default:
 			panic(fmt.Sprintf("unhandled opcode %+v", op))
 		}
@@ -378,7 +350,8 @@ func (this *vm) Run() value {
 
 func (this *vm) handleCall(op opcode, isNew bool) {
 	// my, this is inefficient
-	builtinArgs := this.currentFrame.data_stack.popSlice(op.odata.asInt() + 1)
+	builtinArgs := this.data_stack.popSlice(op.odata.asInt() + 1)
+
 	fn := builtinArgs[len(builtinArgs)-1]
 	if len(builtinArgs) > 1 {
 		builtinArgs = builtinArgs[0 : len(builtinArgs)-1]
@@ -388,7 +361,7 @@ func (this *vm) handleCall(op opcode, isNew bool) {
 
 	fo := fn.(valueObject)
 
-	sf := makeStackFrame(stack{}, this.ip, this.currentFrame)
+	sf := makeStackFrame(this.ip, this.currentFrame)
 	this.pushStack(sf)
 
 	var rval value

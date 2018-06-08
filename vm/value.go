@@ -28,313 +28,296 @@ package vm
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"strconv"
-	"unsafe"
 )
 
-type value_type uint8
+/////////////////////////////////
+// constructors
+/////////////////////////////////
 
-func (this value_type) String() string {
-	switch this {
-	case UNDEFINED:
-		return "UNDEFINED"
-	case NULL:
-		return "NULL"
-	case BOOL:
-		return "BOOL"
-	case NUMBER:
-		return "NUMBER"
-	case STRING:
-		return "STRING"
-	case OBJECT:
-		return "OBJECT"
-	}
-	panic("unreachable")
+func newUndefined() valueUndefined {
+	return valueUndefined{}
 }
 
-const (
-	UNDEFINED value_type = iota
-	NULL
-	BOOL
-	NUMBER
-	STRING
-	OBJECT
-)
-
-type value struct {
-	vtype value_type
-	vdata []byte // horrible un-type-safe voodoo
-	odata *objectData
-}
-
-func newUndefined() value {
-	return value{}
-}
-
-func newNull() value {
-	return value{NULL, nil, nil}
-}
-
-// A simple allocation pool, to help reduce value allocation time.
-type vdataPool struct {
-	pool []byte
-	head int
-}
-
-const maxPoolSize = 1024 * 10
-
-func (this *vdataPool) reallocate() {
-	this.pool = make([]byte, maxPoolSize)
-	this.head = 0
-}
-
-const poolDebug = false
-
-func (this *vdataPool) alloc(sz int) []byte {
-	if sz >= maxPoolSize {
-		panic("allocation exceeds vdata pool bounds; how?!")
-	}
-	if this.head+sz >= len(this.pool) {
-		if poolDebug {
-			log.Printf("Reallocating pool")
-		}
-		this.reallocate()
-	}
-	ret := this.pool[this.head : this.head+sz]
-	this.head += sz
-	return ret
-}
-
-var allocPool = vdataPool{}
-
-// allocPool is great, but let's avoid even allocating for booleans that are
-// used everywhere and absolutely never change...
-var trueVData []byte = make([]byte, 1)
-var falseVData []byte = make([]byte, 1)
-
-func init() {
-	*(*bool)(unsafe.Pointer(&trueVData[0])) = true
-	*(*bool)(unsafe.Pointer(&falseVData[0])) = false
+func newNull() valueNull {
+	return valueNull{}
 }
 
 func newBool(val bool) value {
 	if val {
-		return value{BOOL, trueVData, nil}
+		return valueBool(true)
 	} else {
-		return value{BOOL, falseVData, nil}
+		return valueBool(false)
 	}
 }
 
-func newNumber(val float64) value {
-	v := value{NUMBER, allocPool.alloc(8), nil}
-	*(*float64)(unsafe.Pointer(&v.vdata[0])) = val
+func newNumber(val float64) valueNumber {
+	return valueNumber(val)
+}
+
+func newString(val string) valueString {
+	return valueString(val)
+}
+
+/////////////////////////////////
+// type definitions
+/////////////////////////////////
+
+// value represents an abstraction of a JavaScript value.
+type value interface {
+	ToInteger() int
+	ToNumber() float64
+	ToBoolean() bool
+	ToString() valueString
+	ToObject() valueObject
+	hasPrimitiveBase() bool
+	String() string
+}
+
+/////////////////////////////////
+
+type valueUndefined struct {
+}
+
+func (this valueUndefined) ToInteger() int {
+	return 0
+}
+func (this valueUndefined) ToNumber() float64 {
+	return math.NaN()
+}
+func (this valueUndefined) ToBoolean() bool {
+	return false
+}
+func (this valueUndefined) ToString() valueString {
+	return "undefined"
+}
+func (this valueUndefined) ToObject() valueObject {
+	panic("TypeError")
+}
+func (this valueUndefined) hasPrimitiveBase() bool {
+	return false
+}
+func (this valueUndefined) String() string {
+	return this.ToString().String()
+}
+
+/////////////////////////////////
+
+type valueNull struct {
+}
+
+func (this valueNull) ToInteger() int {
+	return 0
+}
+func (this valueNull) ToNumber() float64 {
+	return +0
+}
+func (this valueNull) ToBoolean() bool {
+	return false
+}
+func (this valueNull) ToString() valueString {
+	return "null"
+}
+func (this valueNull) ToObject() valueObject {
+	panic("TypeError")
+}
+func (this valueNull) hasPrimitiveBase() bool {
+	return false
+}
+func (this valueNull) String() string {
+	return this.ToString().String()
+}
+
+/////////////////////////////////
+
+type valueBool bool
+
+func (this valueBool) ToInteger() int {
+	if this {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+func (this valueBool) ToNumber() float64 {
+	if this {
+		return 1
+	} else {
+		return +0
+	}
+}
+
+func (this valueBool) ToBoolean() bool {
+	return bool(this)
+}
+
+func (this valueBool) ToString() valueString {
+	if this {
+		return "true"
+	} else {
+		return "false"
+	}
+}
+
+func (this valueBool) ToObject() valueObject {
+	return newBooleanObject(bool(this))
+}
+
+func (this valueBool) hasPrimitiveBase() bool {
+	return true
+}
+
+func (this valueBool) String() string {
+	return this.ToString().String()
+}
+
+/////////////////////////////////
+
+type valueString string
+
+func (this valueString) ToInteger() int {
+	panic("not implemented")
+}
+
+func (this valueString) ToNumber() float64 {
+	// ### toNumber(string) not implemented (es5 9.3.1)
+	v, _ := strconv.ParseFloat(this.String(), 64)
 	return v
 }
 
-func newString(val string) value {
-	v := value{STRING, allocPool.alloc(len(val)), nil}
-	for i, c := range []byte(val) {
-		v.vdata[i] = c
-	}
-	return v
+func (this valueString) ToBoolean() bool {
+	return len(this) > 0
 }
 
-func (this value) asUndefined() value {
-	switch this.vtype {
-	case UNDEFINED:
-		return newUndefined()
-	}
-	panic(fmt.Sprintf("can't convert! %s", this.vtype))
+func (this valueString) ToString() valueString {
+	return this
 }
 
-func (this value) asNull() value {
-	switch this.vtype {
-	case NULL:
-		return newNull()
-	}
-	panic(fmt.Sprintf("can't convert! %s", this.vtype))
+func (this valueString) ToObject() valueObject {
+	return newStringObject(this.String())
 }
 
-func (this value) hasPrimitiveBase() bool {
-	switch this.vtype {
-	case BOOL:
-		fallthrough
-	case STRING:
-		fallthrough
-	case NUMBER:
+func (this valueString) hasPrimitiveBase() bool {
+	return true
+}
+
+func (this valueString) String() string {
+	return string(this)
+}
+
+/////////////////////////////////
+
+type valueNumber float64
+
+func (this valueNumber) ToInteger() int {
+	tf := float64(this)
+	if math.IsNaN(tf) {
+		return +0
+	}
+	if int(tf) == 0 || math.IsInf(tf, 0) {
+		return int(tf)
+	}
+
+	if tf > 0 {
+		return int(1 * math.Floor(math.Abs(tf)))
+	} else {
+		return int(-1 * math.Floor(math.Abs(tf)))
+	}
+}
+
+func (this valueNumber) ToNumber() float64 {
+	return float64(this)
+}
+
+func (this valueNumber) ToBoolean() bool {
+	if int(this) == 0 || math.IsNaN(float64(this)) {
+		return false
+	} else {
 		return true
 	}
+}
 
+func (this valueNumber) ToString() valueString {
+	return newString(fmt.Sprintf("%f", float64(this)))
+}
+
+func (this valueNumber) ToObject() valueObject {
+	return newNumberObject(float64(this))
+}
+
+func (this valueNumber) hasPrimitiveBase() bool {
+	return true
+}
+
+func (this valueNumber) String() string {
+	return this.ToString().String()
+}
+
+/////////////////////////////////
+
+func (this valueObject) ToInteger() int {
+	return int(this.ToNumber())
+}
+
+func (this valueObject) ToNumber() float64 {
+	panic("object conversion not implemented")
+}
+
+func (this valueObject) ToBoolean() bool {
+	return true
+}
+
+func (this valueObject) ToString() valueString {
+	if this.odata.objectType == STRING_OBJECT {
+		return this.odata.primitiveData.ToString()
+	}
+	return "[object]"
+}
+
+func (this valueObject) ToObject() valueObject {
+	return this
+}
+
+func (this valueObject) hasPrimitiveBase() bool {
 	return false
 }
 
-func (this value) asBool() bool {
-	switch this.vtype {
-	case BOOL:
-		return *(*bool)(unsafe.Pointer(&this.vdata[0]))
-	case OBJECT:
-		if this.odata.objectType == BOOLEAN_OBJECT {
-			return *(*bool)(unsafe.Pointer(&this.vdata[0]))
-		}
-		panic(fmt.Sprintf("can't convert strange object! %d", this.odata.objectType))
-	}
-	panic(fmt.Sprintf("can't convert! %s", this.vtype))
+func (this valueObject) String() string {
+	return this.ToString().String()
 }
 
-func (this value) asNumber() float64 {
-	switch this.vtype {
-	case NUMBER:
-		return *(*float64)(unsafe.Pointer(&this.vdata[0]))
+//////////////////////////////////////
+//////////////////////////////////////
+
+func checkObjectCoercible(vm *vm, v value) {
+	switch v.(type) {
+	case valueUndefined:
+		panic("TypeError")
+	case valueNull:
+		panic("TypeError")
+	case valueBool:
+	case valueNumber:
+	case valueString:
+	case valueObject:
 	}
-	panic(fmt.Sprintf("can't convert! %s", this.vtype))
 }
 
-func (this value) asString() string {
-	switch this.vtype {
-	case STRING:
-		return string(this.vdata)
-	case OBJECT:
-		if this.odata.objectType == STRING_OBJECT {
-			return string(this.vdata)
-		}
-		panic(fmt.Sprintf("can't convert strange object! %d", this.odata.objectType))
-	}
-	panic(fmt.Sprintf("can't convert! %s", this.vtype))
-}
-
-/*
-func (this value) asObject() float64 {
-*/
-
-func (this value) toPrimitive() value {
-	switch this.vtype {
-	case UNDEFINED:
-		fallthrough
-	case NULL:
-		fallthrough
-	case BOOL:
-		fallthrough
-	case NUMBER:
-		fallthrough
-	case STRING:
-		return this
-	case OBJECT:
+func valueToPrimitive(v value) value {
+	switch v.(type) {
+	case valueUndefined:
+		return v
+	case valueNull:
+		return v
+	case valueBool:
+		return v
+	case valueNumber:
+		return v
+	case valueString:
+		return v
+	case valueObject:
 		panic("object conversion not implemented")
 	}
 	panic("unreachable")
-}
-
-func (this value) toBoolean() bool {
-	switch this.vtype {
-	case UNDEFINED:
-		fallthrough
-	case NULL:
-		return false
-	case BOOL:
-		return this.asBool()
-	case NUMBER:
-		n := this.asNumber()
-		if int(n) == 0 || math.IsNaN(n) {
-			return false
-		} else {
-			return true
-		}
-	case STRING:
-		s := this.asString()
-		return len(s) > 0
-	case OBJECT:
-		return true
-	}
-	panic("unreachable")
-}
-
-func (this value) toNumber() float64 {
-	switch this.vtype {
-	case UNDEFINED:
-		return math.NaN()
-	case NULL:
-		return +0
-	case BOOL:
-		if this.asBool() {
-			return 1
-		} else {
-			return +0
-		}
-	case NUMBER:
-		return this.asNumber()
-	case STRING:
-		// ### toNumber(string) not implemented (es5 9.3.1)
-		v, _ := strconv.ParseFloat(this.asString(), 64)
-		return v
-	case OBJECT:
-		v := this.toPrimitive()
-		return v.toNumber()
-	}
-	panic("unreachable")
-}
-
-func (this value) toInteger() int {
-	number := this.toNumber()
-	if math.IsNaN(number) {
-		return +0
-	}
-	if int(number) == 0 || math.IsInf(number, 0) {
-		return int(number)
-	}
-
-	if number > 0 {
-		return int(1 * math.Floor(math.Abs(number)))
-	} else {
-		return int(-1 * math.Floor(math.Abs(number)))
-	}
-}
-
-func (this value) toInt32() int64 {
-	panic("not implemented (es5 9.5)")
-}
-
-func (this value) toUInt32() int64 {
-	panic("not implemented (es5 9.6)")
-}
-
-func (this value) toUInt16() int64 {
-	panic("not implemented (es5 9.7)")
-}
-
-func (this value) toString() string {
-	switch this.vtype {
-	case UNDEFINED:
-		return "undefined"
-	case NULL:
-		return "null"
-	case BOOL:
-		if this.asBool() {
-			return "true"
-		} else {
-			return "false"
-		}
-	case NUMBER:
-		// may be wrong, check es5 9.8.1
-		return fmt.Sprintf("%f", this.asNumber())
-	case STRING:
-		return this.asString()
-	case OBJECT:
-		if this.odata.objectType == STRING_OBJECT {
-			return this.asString()
-		}
-
-		// not according to ES spec...
-		// should call toString() method?
-		return "[object]"
-		//v := this.toPrimitive()
-		//return v.toString()
-	}
-
-	panic("unreachable")
-}
-
-func (this value) String() string {
-	return this.toString()
 }

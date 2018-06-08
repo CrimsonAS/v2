@@ -31,9 +31,9 @@ import (
 	"math/rand"
 )
 
-func defineMathObject(vm *vm) value {
+func defineMathObject(vm *vm) valueObject {
 	mathO := newObject()
-	mathO.odata.prototype = objectProto
+	mathO.odata.prototype = &objectProto
 
 	mathO.defineReadonlyProperty(vm, "E", newNumber(2.7182818284590452354), 1)
 	mathO.defineReadonlyProperty(vm, "LN10", newNumber(2.302585092994046), 1)
@@ -66,45 +66,45 @@ func defineMathObject(vm *vm) value {
 }
 
 func math_abs(vm *vm, f value, args []value) value {
-	return newNumber(math.Abs(args[0].toNumber()))
+	return newNumber(math.Abs(args[0].ToNumber()))
 }
 
 func math_acos(vm *vm, f value, args []value) value {
-	return newNumber(math.Acos(args[0].toNumber()))
+	return newNumber(math.Acos(args[0].ToNumber()))
 }
 
 func math_asin(vm *vm, f value, args []value) value {
-	return newNumber(math.Asin(args[0].toNumber()))
+	return newNumber(math.Asin(args[0].ToNumber()))
 }
 
 func math_atan(vm *vm, f value, args []value) value {
-	return newNumber(math.Atan(args[0].toNumber()))
+	return newNumber(math.Atan(args[0].ToNumber()))
 }
 
 func math_ceil(vm *vm, f value, args []value) value {
-	return newNumber(math.Ceil(args[0].toNumber()))
+	return newNumber(math.Ceil(args[0].ToNumber()))
 }
 
 func math_cos(vm *vm, f value, args []value) value {
-	return newNumber(math.Cos(args[0].toNumber()))
+	return newNumber(math.Cos(args[0].ToNumber()))
 }
 
 func math_exp(vm *vm, f value, args []value) value {
-	return newNumber(math.Exp(args[0].toNumber()))
+	return newNumber(math.Exp(args[0].ToNumber()))
 }
 
 func math_floor(vm *vm, f value, args []value) value {
-	return newNumber(math.Floor(args[0].toNumber()))
+	return newNumber(math.Floor(args[0].ToNumber()))
 }
 
 func math_log(vm *vm, f value, args []value) value {
-	return newNumber(math.Log(args[0].toNumber()))
+	return newNumber(math.Log(args[0].ToNumber()))
 }
 
 func math_max(vm *vm, f value, args []value) value {
 	ret := math.Inf(-1)
 	for _, a := range args {
-		n := a.toNumber()
+		n := a.ToNumber()
 		if math.IsNaN(n) {
 			return newNumber(math.NaN())
 		}
@@ -116,7 +116,7 @@ func math_max(vm *vm, f value, args []value) value {
 func math_min(vm *vm, f value, args []value) value {
 	ret := math.Inf(+1)
 	for _, a := range args {
-		n := a.toNumber()
+		n := a.ToNumber()
 		if math.IsNaN(n) {
 			return newNumber(math.NaN())
 		}
@@ -130,17 +130,17 @@ func math_random(vm *vm, f value, args []value) value {
 }
 
 func math_round(vm *vm, f value, args []value) value {
-	return newNumber(math.Round(args[0].toNumber()))
+	return newNumber(math.Round(args[0].ToNumber()))
 }
 
 func math_sin(vm *vm, f value, args []value) value {
-	return newNumber(math.Sin(args[0].toNumber()))
+	return newNumber(math.Sin(args[0].ToNumber()))
 }
 
 func math_sqrt(vm *vm, f value, args []value) value {
-	return newNumber(math.Sqrt(args[0].toNumber()))
+	return newNumber(math.Sqrt(args[0].ToNumber()))
 }
 
 func math_tan(vm *vm, f value, args []value) value {
-	return newNumber(math.Tan(args[0].toNumber()))
+	return newNumber(math.Tan(args[0].ToNumber()))
 }

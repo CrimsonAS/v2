@@ -33,15 +33,15 @@ import (
 	"strings"
 )
 
-func newStringObject(s string) value {
-	v := newString(s)
-	v.vtype = OBJECT
-	v.odata = &objectData{STRING_OBJECT, value{}, nil, nil, nil, true}
-	v.odata.prototype = stringProto
+func newStringObject(s string) valueObject {
+	v := newObject()
+	v.odata.objectType = STRING_OBJECT
+	v.odata.primitiveData = newString(s)
+	v.odata.prototype = &stringProto
 	return v
 }
 
-var stringProto value
+var stringProto valueObject
 
 func defineStringCtor(vm *vm) value {
 	stringProto = newObject()
@@ -57,7 +57,7 @@ func defineStringCtor(vm *vm) value {
 	stringProto.defineDefaultProperty(vm, "trim", newFunctionObject(string_prototype_trim, nil), 0)
 
 	stringO := newFunctionObject(string_call, string_ctor)
-	stringO.odata.prototype = stringProto
+	stringO.odata.prototype = &stringProto
 
 	stringProto.defineDefaultProperty(vm, "constructor", stringO, 0)
 
@@ -66,7 +66,7 @@ func defineStringCtor(vm *vm) value {
 
 func string_call(vm *vm, f value, args []value) value {
 	if len(args) > 0 {
-		return newString(args[0].toString())
+		return newString(args[0].ToString().String())
 	} else {
 		return newString("")
 	}
@@ -74,46 +74,44 @@ func string_call(vm *vm, f value, args []value) value {
 
 func string_ctor(vm *vm, f value, args []value) value {
 	if len(args) > 0 {
-		return newStringObject(args[0].toString())
+		return newStringObject(args[0].ToString().String())
 	} else {
 		return newStringObject("")
 	}
 }
 
 func string_prototype_toString(vm *vm, f value, args []value) value {
-	switch f.vtype {
-	case STRING:
-		break
-	case OBJECT:
-		if f.odata.objectType == STRING_OBJECT {
-			break
+	switch o := f.(type) {
+	case valueString:
+		return newString(f.ToString().String())
+	case valueObject:
+		if o.odata.objectType == STRING_OBJECT {
+			return newString(o.odata.primitiveData.ToString().String())
 		}
-		fallthrough
 	default:
 		panic(fmt.Sprintf("Not a string! %s", f)) // ### throw
 	}
-	return newString(f.asString())
+	panic("unreachable")
 }
 
 func string_prototype_valueOf(vm *vm, f value, args []value) value {
-	switch f.vtype {
-	case STRING:
-		break
-	case OBJECT:
-		if f.odata.objectType == STRING_OBJECT {
-			break
+	switch o := f.(type) {
+	case valueString:
+		return newString(f.ToString().String())
+	case valueObject:
+		if o.odata.objectType == STRING_OBJECT {
+			return newString(o.odata.primitiveData.ToString().String())
 		}
-		fallthrough
 	default:
 		panic(fmt.Sprintf("Not a string! %s", f)) // ### throw
 	}
-	return newString(f.asString())
+	panic("unreachable")
 }
 
 func string_prototype_charAt(vm *vm, f value, args []value) value {
-	f.checkObjectCoercible(vm)
-	S := f.toString()
-	pos := args[0].toInteger()
+	checkObjectCoercible(vm, f)
+	S := f.ToString().String()
+	pos := args[0].ToInteger()
 	size := len(S)
 	if pos < 0 || pos >= size {
 		return newString("")
@@ -123,9 +121,9 @@ func string_prototype_charAt(vm *vm, f value, args []value) value {
 }
 
 func string_prototype_charCodeAt(vm *vm, f value, args []value) value {
-	f.checkObjectCoercible(vm)
-	S := f.toString()
-	pos := args[0].toInteger()
+	checkObjectCoercible(vm, f)
+	S := f.ToString().String()
+	pos := args[0].ToInteger()
 	size := len(S)
 	if pos < 0 || pos >= size {
 		return newNumber(math.NaN())
@@ -135,23 +133,23 @@ func string_prototype_charCodeAt(vm *vm, f value, args []value) value {
 }
 
 func string_prototype_concat(vm *vm, f value, args []value) value {
-	f.checkObjectCoercible(vm)
-	S := f.toString()
+	checkObjectCoercible(vm, f)
+	S := f.ToString().String()
 
 	for _, arg := range args {
-		S += arg.toString()
+		S += arg.ToString().String()
 	}
 
 	return newString(S)
 }
 
 func string_prototype_indexOf(vm *vm, f value, args []value) value {
-	f.checkObjectCoercible(vm)
-	S := f.toString()
-	searchStr := args[0].toString()
+	checkObjectCoercible(vm, f)
+	S := f.ToString().String()
+	searchStr := args[0].ToString().String()
 	pos := 0
 	if len(args) > 1 {
-		pos = args[1].toInteger()
+		pos = args[1].ToInteger()
 	}
 
 	if pos > len(S) {
@@ -162,12 +160,12 @@ func string_prototype_indexOf(vm *vm, f value, args []value) value {
 }
 
 func string_prototype_lastIndexOf(vm *vm, f value, args []value) value {
-	f.checkObjectCoercible(vm)
-	S := f.toString()
-	searchStr := args[0].toString()
+	checkObjectCoercible(vm, f)
+	S := f.ToString().String()
+	searchStr := args[0].ToString().String()
 	pos := len(S)
 	if len(args) > 1 {
-		pos = args[1].toInteger()
+		pos = args[1].ToInteger()
 	}
 
 	if pos > len(S) {
@@ -186,8 +184,8 @@ func string_prototype_lastIndexOf(vm *vm, f value, args []value) value {
 // ### substring
 
 func string_prototype_toLowerCase(vm *vm, f value, args []value) value {
-	f.checkObjectCoercible(vm)
-	S := f.toString()
+	checkObjectCoercible(vm, f)
+	S := f.ToString().String()
 
 	log.Printf(strings.ToLower(S))
 	return newString(strings.ToLower(S))
@@ -196,8 +194,8 @@ func string_prototype_toLowerCase(vm *vm, f value, args []value) value {
 // ### toLocaleLowerCase
 
 func string_prototype_toUpperCase(vm *vm, f value, args []value) value {
-	f.checkObjectCoercible(vm)
-	S := f.toString()
+	checkObjectCoercible(vm, f)
+	S := f.ToString().String()
 
 	return newString(strings.ToUpper(S))
 }
@@ -205,8 +203,8 @@ func string_prototype_toUpperCase(vm *vm, f value, args []value) value {
 // ### toLocaleUpperCase
 
 func string_prototype_trim(vm *vm, f value, args []value) value {
-	f.checkObjectCoercible(vm)
-	S := f.toString()
+	checkObjectCoercible(vm, f)
+	S := f.ToString().String()
 
 	return newString(strings.Trim(S, "\n "))
 }

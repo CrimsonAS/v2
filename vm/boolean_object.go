@@ -30,50 +30,48 @@ import (
 	"fmt"
 )
 
-var booleanProto value
+var booleanProto valueObject
 
-func newBooleanObject(b bool) value {
-	v := newBool(b)
-	v.vtype = OBJECT
-	v.odata = &objectData{BOOLEAN_OBJECT, value{}, nil, nil, nil, true}
-	v.odata.prototype = booleanProto
+func newBooleanObject(b bool) valueObject {
+	v := newObject()
+	v.odata.objectType = BOOLEAN_OBJECT
+	v.odata.primitiveData = newBool(b)
+	v.odata.prototype = &booleanProto
 	return v
 }
 
-func defineBooleanCtor(vm *vm) value {
+func defineBooleanCtor(vm *vm) valueObject {
 	booleanProto = newObject()
 	booleanProto.defineDefaultProperty(vm, "toString", newFunctionObject(boolean_prototype_toString, nil), 0)
 	booleanProto.defineDefaultProperty(vm, "valueOf", newFunctionObject(boolean_prototype_valueOf, nil), 0)
 
 	boolO := newFunctionObject(boolean_call, boolean_ctor)
-	boolO.odata.prototype = booleanProto
+	boolO.odata.prototype = &booleanProto
 
 	booleanProto.defineDefaultProperty(vm, "constructor", boolO, 0)
 	return boolO
 }
 
 func boolean_call(vm *vm, f value, args []value) value {
-	return newBool(args[0].toBoolean())
+	return newBool(args[0].ToBoolean())
 }
 
 func boolean_ctor(vm *vm, f value, args []value) value {
-	return newBooleanObject(args[0].toBoolean())
+	return newBooleanObject(args[0].ToBoolean())
 }
 
 func boolean_prototype_toString(vm *vm, f value, args []value) value {
-	switch f.vtype {
-	case BOOL:
-		break
-	case OBJECT:
-		if f.odata.objectType == BOOLEAN_OBJECT {
-			break
-		}
-		fallthrough
+	b := false
+	switch o := f.(type) {
+	case valueBool:
+		b = bool(o)
+	case valueObject:
+		b = bool(o.odata.primitiveData.(valueBool))
 	default:
 		panic(fmt.Sprintf("Not a boolean! %s", f)) // ### throw
 	}
 
-	if f.asBool() {
+	if b {
 		return newString("true")
 	} else {
 		return newString("false")
@@ -81,16 +79,15 @@ func boolean_prototype_toString(vm *vm, f value, args []value) value {
 }
 
 func boolean_prototype_valueOf(vm *vm, f value, args []value) value {
-	switch f.vtype {
-	case BOOL:
-		break
-	case OBJECT:
-		if f.odata.objectType == BOOLEAN_OBJECT {
-			break
-		}
-		fallthrough
+	b := false
+	switch o := f.(type) {
+	case valueBool:
+		b = bool(o)
+	case valueObject:
+		b = bool(o.odata.primitiveData.(valueBool))
 	default:
 		panic(fmt.Sprintf("Not a boolean! %s", f)) // ### throw
 	}
-	return newBool(f.asBool())
+
+	return newBool(b)
 }

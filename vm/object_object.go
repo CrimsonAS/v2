@@ -27,14 +27,15 @@
 package vm
 
 import (
+	"fmt"
 	"log"
 )
 
-var objectProto value
+var objectProto valueObject
 
 // Keep in mind that this is not just used by this file.
-func newObject() value {
-	v := value{OBJECT, nil, &objectData{OBJECT_PLAIN, value{}, nil, nil, nil, true}}
+func newObject() valueObject {
+	v := valueObject{&valueObjectData{objectType: OBJECT_PLAIN, extensible: true}}
 	return v
 }
 
@@ -46,44 +47,44 @@ func defineObjectCtor(vm *vm) value {
 
 	objectCtor := newFunctionObject(object_call, object_ctor)
 	objectCtor.defineDefaultProperty(vm, "getPrototypeOf", newFunctionObject(object_ctor_getPrototypeOf, nil), 0)
-	objectCtor.odata.prototype = objectProto
+	objectCtor.odata.prototype = &objectProto
 
 	return objectCtor
 }
 
 func object_call(vm *vm, f value, args []value) value {
-	return args[0].toObject()
+	return args[0].ToObject()
 }
 
 func object_ctor(vm *vm, f value, args []value) value {
 	if len(args) > 0 {
 		v := args[0]
-		switch v.vtype {
-		case OBJECT:
+		switch v.(type) {
+		case valueObject:
 			return v
-		case STRING:
-			fallthrough
-		case BOOL:
-			fallthrough
-		case NUMBER:
-			return v.toObject()
+		case valueString:
+			return v.ToObject()
+		case valueBool:
+			return v.ToObject()
+		case valueNumber:
+			return v.ToObject()
 		}
 	}
 
 	o := newObject()
-	o.odata.prototype = objectProto
-	// ### Extensible
+	o.odata.prototype = &objectProto
 	return o
 }
 
 func object_prototype_toString(vm *vm, f value, args []value) value {
-	if f.vtype == UNDEFINED {
+	switch f.(type) {
+	case valueUndefined:
 		return newString("[object Undefined]")
-	} else if f.vtype == NULL {
+	case valueNull:
 		return newString("[object Null]")
 	}
 
-	o := f.toObject()
+	o := f.ToObject()
 	switch o.odata.objectType {
 	case OBJECT_PLAIN:
 		return newString("[object Object]")
@@ -97,19 +98,19 @@ func object_prototype_toString(vm *vm, f value, args []value) value {
 		return newString("[object Function]")
 	}
 
-	panic("unknown object type")
+	panic(fmt.Sprintf("%d is an unknown object type", o.odata.objectType))
 }
 
 func object_prototype_valueOf(vm *vm, f value, args []value) value {
-	o := f.toObject()
+	o := f.ToObject()
 	return o
 }
 
 func object_prototype_hasOwnProperty(vm *vm, f value, args []value) value {
-	P := args[0].toString()
-	O := f.toObject()
+	P := args[0].ToString()
+	O := f.ToObject()
 
-	pd := O.getOwnProperty(vm, P)
+	pd := O.getOwnProperty(vm, P.String())
 	if pd == nil {
 		return newBool(false)
 	} else {
@@ -118,11 +119,13 @@ func object_prototype_hasOwnProperty(vm *vm, f value, args []value) value {
 }
 
 func object_ctor_getPrototypeOf(vm *vm, f value, args []value) value {
-	if f.vtype != OBJECT {
+	switch o := f.(type) {
+	case valueObject:
+		return o.odata.prototype
+	default:
 		panic("Not an object") // TypeError
 	}
 
-	return f.odata.prototype
 }
 
 func object_get(vm *vm, f value, prop string, pd *propertyDescriptor) value {

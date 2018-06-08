@@ -29,7 +29,6 @@ package vm
 import (
 	"fmt"
 	"log"
-	"unsafe"
 )
 
 type objectType uint8
@@ -43,17 +42,17 @@ const (
 	FUNCTION_OBJECT
 )
 
-func (this value) defineDefaultProperty(vm *vm, prop string, v value, lt int) bool {
+func (this valueObject) defineDefaultProperty(vm *vm, prop string, v value, lt int) bool {
 	pd := &propertyDescriptor{name: prop, length: lt, enumerable: true, configurable: false, value: v}
 	return this.defineOwnProperty(vm, prop, pd, true)
 }
 
-func (this value) defineReadonlyProperty(vm *vm, prop string, v value, lt int) bool {
+func (this valueObject) defineReadonlyProperty(vm *vm, prop string, v value, lt int) bool {
 	pd := &propertyDescriptor{name: prop, length: lt, enumerable: true, configurable: false, value: v}
 	return this.defineOwnProperty(vm, prop, pd, true)
 }
 
-func (this value) canPut(vm *vm, prop string) bool {
+func (this valueObject) canPut(vm *vm, prop string) bool {
 	desc := this.getOwnProperty(vm, prop)
 	if desc != nil {
 		if desc.isAccessorDescriptor() {
@@ -68,7 +67,7 @@ func (this value) canPut(vm *vm, prop string) bool {
 	}
 
 	proto := this.odata.prototype
-	if proto.vtype == NULL {
+	if proto == nil {
 		return this.odata.extensible
 	}
 
@@ -94,13 +93,13 @@ func (this value) canPut(vm *vm, prop string) bool {
 }
 
 // ### ArrayObject [[DefineOwnProperty]] 15.4.5.1
-func (this value) defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool {
+func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool {
 	if objectDebug {
-		//log.Printf("Defining %s on %s %t", prop, this, this.odata.extensible)
+		log.Printf("Defining %s on %s %t", prop, this, this.odata.extensible)
 	}
 	current := this.getOwnProperty(vm, prop)
-	extensible := this.odata.extensible
 	if current == nil {
+		extensible := this.odata.extensible
 		if !extensible {
 			if throw {
 				panic("TypeError")
@@ -208,7 +207,7 @@ func (this value) defineOwnProperty(vm *vm, prop string, desc *propertyDescripto
 	return true
 }
 
-func (this value) put(vm *vm, prop string, v value, throw bool) {
+func (this valueObject) put(vm *vm, prop string, v value, throw bool) {
 	if objectDebug {
 		log.Printf("Setting %s = %s on %s", prop, v, this)
 	}
@@ -235,7 +234,7 @@ func (this value) put(vm *vm, prop string, v value, throw bool) {
 	}
 }
 
-func (this value) get(vm *vm, prop string) value {
+func (this valueObject) get(vm *vm, prop string) value {
 	desc := this.getProperty(vm, prop)
 	if desc == nil {
 		return newUndefined()
@@ -250,12 +249,14 @@ func (this value) get(vm *vm, prop string) value {
 	panic("unreachable")
 }
 
-func (this value) getOwnProperty(vm *vm, prop string) *propertyDescriptor {
+func (this valueObject) getOwnProperty(vm *vm, prop string) *propertyDescriptor {
 	if objectDebug {
-		//log.Printf("GetOwnProperty %s.%s", this, prop)
+		log.Printf("GetOwnProperty %T.%s %d props", this, prop, len(this.odata.properties))
 	}
 	for idx, _ := range this.odata.properties {
-		//log.Printf("Looking for %s found %s", prop, this.odata.properties[idx].name)
+		if objectDebug {
+			log.Printf("Looking for %s found %s", prop, this.odata.properties[idx].name)
+		}
 		if this.odata.properties[idx].name == prop {
 			return this.odata.properties[idx]
 		}
@@ -265,13 +266,13 @@ func (this value) getOwnProperty(vm *vm, prop string) *propertyDescriptor {
 	return nil
 }
 
-func (this value) getProperty(vm *vm, prop string) *propertyDescriptor {
+func (this valueObject) getProperty(vm *vm, prop string) *propertyDescriptor {
 	pd := this.getOwnProperty(vm, prop)
 	if pd != nil {
 		return pd
 	}
 
-	if this.odata.prototype.vtype != OBJECT {
+	if this.odata.prototype == nil {
 		return nil
 	}
 
@@ -311,74 +312,45 @@ func (this *propertyDescriptor) isAccessorDescriptor() bool {
 	return this.get != nil || this.set != nil
 }
 
-type objectData struct {
-	objectType   objectType
-	prototype    value
-	properties   []*propertyDescriptor
-	callPtr      foFn // used for function object
-	constructPtr foFn // used for function object
-	extensible   bool // ### is this needed?
+type valueObject struct {
+	odata *valueObjectData
 }
 
-const objectDebug = true
+type valueObjectData struct {
+	primitiveData value
+	objectType    objectType
+	prototype     *valueObject
+	properties    []*propertyDescriptor
+	callPtr       foFn // used for function object
+	constructPtr  foFn // used for function object
+	extensible    bool // ### is this needed?
+}
 
-func newNumberObject(n float64) value {
-	v := value{OBJECT, make([]byte, unsafe.Sizeof(n)), &objectData{NUMBER_OBJECT, value{}, nil, nil, nil, true}}
-	*(*float64)(unsafe.Pointer(&v.vdata[0])) = n
+const objectDebug = false
+
+func newNumberObject(n float64) valueObject {
+	v := valueObject{&valueObjectData{extensible: true}}
+	v.odata.objectType = NUMBER_OBJECT
+	v.odata.primitiveData = newNumber(n)
 	return v
 }
 
-func newFunctionObject(call foFn, construct foFn) value {
-	v := value{OBJECT, nil, &objectData{FUNCTION_OBJECT, value{}, nil, call, construct, true}}
+func newFunctionObject(call foFn, construct foFn) valueObject {
+	v := valueObject{&valueObjectData{extensible: true}}
+	v.odata.objectType = FUNCTION_OBJECT
+	v.odata.callPtr = call
+	v.odata.constructPtr = construct
 	return v
 }
 
-func (this value) checkObjectCoercible(vm *vm) {
-	switch this.vtype {
-	case UNDEFINED:
-		panic("TypeError")
-	case NULL:
-		panic("TypeError")
-	case BOOL:
-	case NUMBER:
-	case STRING:
-	case OBJECT:
-	}
-}
-
-func (this value) toObject() value {
-	switch this.vtype {
-	case UNDEFINED:
-		panic("TypeError")
-	case NULL:
-		panic("TypeError")
-	case BOOL:
-		return newBooleanObject(this.asBool())
-	case NUMBER:
-		return newNumberObject(this.asNumber())
-	case STRING:
-		return newStringObject(this.asString())
-	case OBJECT:
-		return this
-	}
-
-	panic(fmt.Sprintf("can't convert! %s", this.vtype))
-}
-
-func (this value) call(vm *vm, thisArg value, args []value) value {
-	if this.vtype != OBJECT {
-		panic(fmt.Sprintf("can't convert! %s", this.vtype))
-	}
+func (this valueObject) call(vm *vm, thisArg value, args []value) value {
 	if this.odata.objectType != FUNCTION_OBJECT {
 		panic(fmt.Sprintf("can't call non-function! %d", this.odata.objectType))
 	}
 	return this.odata.callPtr(vm, thisArg, args)
 }
 
-func (this value) construct(vm *vm, thisArg value, args []value) value {
-	if this.vtype != OBJECT {
-		panic(fmt.Sprintf("can't convert! %s", this.vtype))
-	}
+func (this valueObject) construct(vm *vm, thisArg value, args []value) value {
 	if this.odata.objectType != FUNCTION_OBJECT {
 		panic(fmt.Sprintf("can't call non-function! %d", this.odata.objectType))
 	}

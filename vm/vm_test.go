@@ -39,9 +39,10 @@ type simpleVMTest struct {
 
 func runSimpleVMTestHelper(t *testing.T, tests []simpleVMTest) {
 	for _, test := range tests {
+		//t.Logf("Testing: %s", test.in)
 		vm := New(test.in)
 		assert.Equal(t, vm.Run(), test.out)
-		t.Logf("Passed %s == %s", test.in, test.out)
+		t.Logf("** Passed %s == %s", test.in, test.out)
 	}
 }
 
@@ -157,7 +158,7 @@ func TestSimple(t *testing.T) {
 		},
 		simpleVMTest{
 			in:  "if (false) { 10/2 }",
-			out: value{},
+			out: newUndefined(),
 		},
 		simpleVMTest{
 			in:  "if (true) { 10/2 }",
@@ -318,7 +319,7 @@ func TestBuiltinFunction(t *testing.T) {
 	// test multiple arguments, and their order
 	{
 		testFunc := func(vm *vm, f value, args []value) value {
-			return newString(args[0].toString() + args[1].toString())
+			return newString(args[0].String() + args[1].String())
 		}
 
 		vm := New("testFunc(\"Hello\", \"World\")")
@@ -396,7 +397,7 @@ func TestFibonnaci(t *testing.T) {
 	f += "};\n"
 	f += "fibonacci(10)\n"
 
-	iterative := newUndefined()
+	var iterative value
 	{
 		vm := New(f)
 		iterative = vm.Run()
@@ -414,7 +415,7 @@ func TestFibonnaci(t *testing.T) {
 	f += "}\n"
 	f += "fibonacci(10)\n"
 
-	recursive := newUndefined()
+	var recursive value
 	{
 		vm := New(f)
 		recursive = vm.Run()

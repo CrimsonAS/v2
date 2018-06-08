@@ -34,9 +34,10 @@ import (
 )
 
 type stackFrame struct {
-	retAddr int
-	vars    map[int]value
-	outer   *stackFrame
+	retAddr   int
+	vars      []int
+	varValues []value
+	outer     *stackFrame
 }
 
 var stringtable []string
@@ -73,10 +74,12 @@ func (this *vm) setVar(name int, nv value) bool {
 	}
 	sf := this.currentFrame
 	for sf != nil {
-		if _, ok := sf.vars[name]; ok {
-			sf.vars[name] = nv
-			//log.Printf("Set var %d to %+v", name, nv)
-			return true
+		for idx, sfvar := range sf.vars {
+			if sfvar == name {
+				//log.Printf("Set var %d to %+v", name, nv)
+				sf.varValues[idx] = nv
+				return true
+			}
 		}
 		sf = sf.outer
 	}
@@ -89,8 +92,10 @@ func (this *vm) findVar(name int) (value, bool) {
 	}
 	sf := this.currentFrame
 	for sf != nil {
-		if v, ok := sf.vars[name]; ok {
-			return v, true
+		for idx, sfvar := range sf.vars {
+			if sfvar == name {
+				return sf.varValues[idx], true
+			}
 		}
 		sf = sf.outer
 	}
@@ -98,15 +103,21 @@ func (this *vm) findVar(name int) (value, bool) {
 }
 
 func (this *vm) defineVar(name int, v value) {
-	// ### ensure it doesn't exist
 	if execDebug {
-		//log.Printf("Var %s declared (%d)", stringtable[op.odata.asInt()], op.odata.asInt())
+		//log.Printf("Var %s declared", stringtable[name])
 	}
-	this.currentFrame.vars[name] = v
+	for _, sfvar := range this.currentFrame.vars {
+		if sfvar == name {
+			panic(fmt.Sprintf("Var %s already defined", stringtable[name]))
+		}
+	}
+
+	this.currentFrame.vars = append(this.currentFrame.vars, name)
+	this.currentFrame.varValues = append(this.currentFrame.varValues, v)
 }
 
 func makeStackFrame(returnAddr int, outer *stackFrame) stackFrame {
-	return stackFrame{vars: make(map[int]value), retAddr: returnAddr, outer: outer}
+	return stackFrame{retAddr: returnAddr, outer: outer}
 }
 
 func New(code string) *vm {

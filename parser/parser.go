@@ -158,8 +158,11 @@ func (this *parser) parseMemberExpression() Node {
 	}
 
 	left := this.parsePrimaryExpression()
-	tok := this.stream.peek()
+	return this.parseMemberOrCall(left)
+}
 
+func (this *parser) parseMemberOrCall(left Node) Node {
+	tok := this.stream.peek()
 	for tok.tokenType == LBRACKET || tok.tokenType == DOT || tok.tokenType == LPAREN {
 		if tok.tokenType == LBRACKET {
 			this.expect(LBRACKET)
@@ -186,7 +189,6 @@ func (this *parser) parseMemberExpression() Node {
 		}
 		tok = this.stream.peek()
 	}
-
 	return left
 }
 
@@ -204,7 +206,8 @@ func (this *parser) parseLeftHandSideExpression() Node {
 	} else {
 		left = this.parseMemberExpression()
 	}
-	return left
+
+	return this.parseMemberOrCall(left)
 }
 
 func (this *parser) parsePostfixExpression() Node {

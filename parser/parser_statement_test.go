@@ -443,3 +443,23 @@ func TestSwitchStatement(t *testing.T) {
 	}
 	assert.Equal(t, Parse("switch (a) { case 1:default: a;}", false), ep4)
 }
+
+func TestFunctionWithCall(t *testing.T) {
+	ep1 := &Program{body: []Node{
+		&ExpressionStatement{
+			X: &CallExpression{
+				tok:       token{tokenType: LPAREN, value: "", pos: 15, col: 15},
+				Arguments: []Node{},
+				X: &FunctionExpression{
+					tok:        token{tokenType: FUNCTION, value: "function"},
+					Parameters: []*IdentifierLiteral{},
+					Identifier: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "f", pos: 9, col: 9}},
+					Body:       &BlockStatement{tok: token{tokenType: LBRACE, pos: 13, col: 13}, Body: []Node{}},
+				},
+			},
+		},
+	},
+	}
+
+	assert.Equal(t, Parse("function f() {}()", false), ep1)
+}

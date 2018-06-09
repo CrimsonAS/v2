@@ -222,6 +222,33 @@ func (this *tokenStream) consumeComment() *token {
 	panic("unreachable")
 }
 
+// also used in ast_literals
+func hex2dec(chr byte) rune {
+	switch {
+	case '0' <= chr && chr <= '9':
+		return rune(chr - '0')
+	case 'a' <= chr && chr <= 'f':
+		return rune(chr - 'a' + 10)
+	case 'A' <= chr && chr <= 'F':
+		return rune(chr - 'A' + 10)
+	default:
+		panic("wtf")
+	}
+}
+
+func (this *tokenStream) decodeHexSequence(len int) rune {
+	var chr rune
+	for i := 0; i < len; i++ {
+		if this.stream.eof() {
+			panic("malformed hex sequence")
+		}
+		nextChar := this.stream.next()
+		val := hex2dec(nextChar) // maybe this shouldn't panic itself..
+		chr = chr<<4 | val
+	}
+	return chr
+}
+
 // ### string escaping, single quoted strings, etc (es5 7.8.4)
 func (this *tokenStream) consumeString(char byte) *token {
 	c := this.createToken(STRING_LITERAL, "")
@@ -229,7 +256,50 @@ func (this *tokenStream) consumeString(char byte) *token {
 	c.pos -= 1
 	c.col -= 1
 	for !this.stream.eof() && this.stream.peek() != char {
-		c.value += string(this.stream.next())
+		nc := this.stream.next()
+
+		if nc == '\\' {
+			if this.stream.eof() {
+				panic("unterminated escape sequence")
+			}
+			nc = this.stream.next()
+
+			switch nc {
+			case 'u':
+				c.value += string(this.decodeHexSequence(4))
+			case 'x':
+				c.value += string(this.decodeHexSequence(2))
+
+			case '\\':
+				c.value += "\\"
+			case '"':
+				c.value += "\""
+			case '\'':
+				c.value += "'"
+			case 'r':
+				c.value += "\n"
+			case 'n':
+				c.value += "\r"
+			case 'f':
+				c.value += "\f"
+			case 't':
+				c.value += "\t"
+			case '0':
+				c.value += "\x00"
+			case 'b':
+				c.value += "\b"
+			case 'v':
+				c.value += "\v"
+
+			case 'a':
+				c.value += string(nc)
+			default:
+				panic(fmt.Sprintf("unrecognized escape sequence %c", nc))
+			}
+		} else {
+			c.value += string(nc)
+		}
+
 	}
 	if !this.stream.eof() {
 		this.stream.next() // consume ending "

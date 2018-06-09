@@ -140,11 +140,23 @@ func TestMultiLineComments(t *testing.T) {
 func TestStringLiterals(t *testing.T) {
 	tests := []tokenStreamTest{
 		tokenStreamTest{
-			input: "\"how are you\"",
+			input: `"how are you"`,
 			output: []token{
 				token{
 					tokenType: STRING_LITERAL,
 					value:     "how are you",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: `"how \"are\" you"`,
+			output: []token{
+				token{
+					tokenType: STRING_LITERAL,
+					value:     `how "are" you`,
 					pos:       0,
 					col:       0,
 					line:      0,
@@ -160,6 +172,63 @@ func TestStringLiterals(t *testing.T) {
 					pos:       0,
 					col:       0,
 					line:      0,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: `'how \'are\' you'`,
+			output: []token{
+				token{
+					tokenType: STRING_LITERAL,
+					value:     "how 'are' you",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: `"\x41"`,
+			output: []token{
+				token{
+					tokenType: STRING_LITERAL,
+					value:     "A",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: `"\x414"`,
+			output: []token{
+				token{
+					tokenType: STRING_LITERAL,
+					value:     "A4",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: `"\x41\x42\x43\x44"`,
+			output: []token{
+				token{
+					tokenType: STRING_LITERAL,
+					value:     "ABCD",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: `"\u2665"`,
+			output: []token{
+				token{
+					tokenType: STRING_LITERAL,
+					value:     "♥",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: `"\u26651"`,
+			output: []token{
+				token{
+					tokenType: STRING_LITERAL,
+					value:     "♥1",
 				},
 			},
 		},

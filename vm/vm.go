@@ -137,7 +137,6 @@ func New(code string) *vm {
 	return &vm
 }
 
-const codegenDebug = false
 const execDebug = false
 
 func (this *vm) pushStack(sf stackFrame) {
@@ -172,19 +171,18 @@ func (this *vm) popStack(rval value) {
 	}
 }
 
-func (this *vm) Run() value {
-	if codegenDebug {
-		log.Printf("String table:")
-		for i := 0; i < len(stringtable); i++ {
-			log.Printf("%d: %s", i, stringtable[i])
-		}
-		log.Printf("Program:")
-		for i := 0; i < len(this.code); i++ {
-			log.Printf("%d: %s", i, this.code[i])
-		}
-		log.Printf("Starting execution")
+func (this *vm) DumpCode() {
+	log.Printf("String table:")
+	for i := 0; i < len(stringtable); i++ {
+		log.Printf("%d: %s", i, stringtable[i])
 	}
+	log.Printf("Program:")
+	for i := 0; i < len(this.code); i++ {
+		log.Printf("%d: %s", i, this.code[i])
+	}
+}
 
+func (this *vm) Run() value {
 	for ; len(this.stack) > 0 && this.ip < len(this.code); this.ip++ {
 		op := this.code[this.ip]
 		if execDebug {

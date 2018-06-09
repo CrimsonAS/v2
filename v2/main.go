@@ -27,6 +27,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/CrimsonAS/v2/vm"
 	"io/ioutil"
@@ -37,19 +38,32 @@ import (
 )
 
 func main() {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
+	profile := flag.Bool("profile", false, "enable profiling")
+	showBytecode := flag.Bool("show-bytecode", false, "show bytecode after code generation")
+	flag.Parse()
+
+	if *profile {
+		log.Printf("Enabling profiling")
+		go func() {
+			log.Println(http.ListenAndServe("localhost:6060", nil))
+		}()
+	}
 
 	f := ""
-	if len(os.Args) > 1 {
-		f = os.Args[1]
+	if flag.NArg() > 0 {
+		f = flag.Args()[0]
+		log.Printf("Running %s", f)
 	} else {
 		fmt.Printf("Need a file to run\n")
 		os.Exit(0)
 	}
 	code, _ := ioutil.ReadFile(f)
 	vm := vm.New(string(code))
+
+	if *showBytecode {
+		vm.DumpCode()
+	}
+
 	ret := vm.Run()
 	log.Printf("Code returned %s", ret)
 }

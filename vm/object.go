@@ -102,10 +102,9 @@ func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDes
 		extensible := this.odata.extensible
 		if !extensible {
 			if throw {
-				panic("TypeError")
-			} else {
-				return false
+				vm.ThrowTypeError("Object is not extensible")
 			}
+			return false
 		}
 
 		var pd *propertyDescriptor
@@ -128,18 +127,16 @@ func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDes
 	if !current.configurable {
 		if desc.configurable {
 			if throw {
-				panic("TypeError")
-			} else {
-				return false
+				vm.ThrowTypeError("Property is not configurable")
 			}
+			return false
 		}
 
 		if desc.enumerable && !current.enumerable {
 			if throw {
-				panic("TypeError")
-			} else {
-				return false
+				vm.ThrowTypeError("Property is not enumerable")
 			}
+			return false
 		}
 	}
 
@@ -148,10 +145,9 @@ func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDes
 	} else if current.isDataDescriptor() != desc.isDataDescriptor() {
 		if !current.configurable {
 			if throw {
-				panic("TypeError")
-			} else {
-				return false
+				vm.ThrowTypeError("Property is not configurable")
 			}
+			return false
 		}
 
 		if current.isDataDescriptor() {
@@ -172,10 +168,9 @@ func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDes
 		if !current.configurable {
 			if !current.writable && desc.writable {
 				if throw {
-					panic("TypeError")
-				} else {
-					return false
+					vm.ThrowTypeError("Property is not configurable")
 				}
+				return false
 			}
 
 			if !current.writable {
@@ -228,7 +223,7 @@ func (this valueObject) put(vm *vm, prop string, v value, throw bool) {
 	}
 	if !this.canPut(vm, prop) {
 		if throw {
-			panic("TypeError")
+			vm.ThrowTypeError("Cannot write to property")
 		}
 		return
 	}

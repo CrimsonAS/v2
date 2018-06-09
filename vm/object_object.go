@@ -123,9 +123,8 @@ func object_ctor_getPrototypeOf(vm *vm, f value, args []value) value {
 	case valueObject:
 		return o.odata.prototype
 	default:
-		panic("Not an object") // TypeError
+		return vm.ThrowTypeError("")
 	}
-
 }
 
 func object_get(vm *vm, f value, prop string, pd *propertyDescriptor) value {

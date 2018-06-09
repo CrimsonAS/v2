@@ -93,7 +93,7 @@ func (this valueUndefined) ToString() valueString {
 	return "undefined"
 }
 func (this valueUndefined) ToObject() valueObject {
-	panic("TypeError")
+	panic("TypeError") // ### can't ThrowTypeError as we have no vm
 }
 func (this valueUndefined) hasPrimitiveBase() bool {
 	return false
@@ -120,7 +120,7 @@ func (this valueNull) ToString() valueString {
 	return "null"
 }
 func (this valueNull) ToObject() valueObject {
-	panic("TypeError")
+	panic("TypeError") // ### can't ThrowTypeError as we have no vm
 }
 func (this valueNull) hasPrimitiveBase() bool {
 	return false
@@ -294,9 +294,9 @@ func (this valueObject) String() string {
 func checkObjectCoercible(vm *vm, v value) {
 	switch v.(type) {
 	case valueUndefined:
-		panic("TypeError")
+		vm.ThrowTypeError("")
 	case valueNull:
-		panic("TypeError")
+		vm.ThrowTypeError("")
 	case valueBool:
 	case valueNumber:
 	case valueString:

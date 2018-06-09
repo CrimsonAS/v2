@@ -182,6 +182,13 @@ func (this *vm) DumpCode() {
 	}
 }
 
+func (this *vm) ThrowTypeError(msg string) value {
+	if msg != "" {
+		panic(fmt.Sprintf("TypeError: %s", msg))
+	}
+	panic("TypeError")
+}
+
 func (this *vm) Run() value {
 	for ; len(this.stack) > 0 && this.ip < len(this.code); this.ip++ {
 		op := this.code[this.ip]

@@ -179,12 +179,12 @@ func (this *tokenStream) consumeComment() *token {
 }
 
 // ### string escaping, single quoted strings, etc (es5 7.8.4)
-func (this *tokenStream) consumeString() *token {
+func (this *tokenStream) consumeString(char byte) *token {
 	c := this.createToken(STRING_LITERAL, "")
 	// these are off-by-one, as we read the " already
 	c.pos -= 1
 	c.col -= 1
-	for !this.stream.eof() && this.stream.peek() != '"' {
+	for !this.stream.eof() && this.stream.peek() != char {
 		c.value += string(this.stream.next())
 	}
 	if !this.stream.eof() {
@@ -518,8 +518,8 @@ func (this *tokenStream) readNext() {
 		return
 	}
 
-	if c == '"' {
-		this.current = this.consumeString()
+	if c == '"' || c == '\'' {
+		this.current = this.consumeString(c)
 		return
 	}
 

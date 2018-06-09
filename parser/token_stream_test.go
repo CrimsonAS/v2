@@ -121,6 +121,18 @@ func TestStringLiterals(t *testing.T) {
 				},
 			},
 		},
+		tokenStreamTest{
+			input: `'how are you'`,
+			output: []token{
+				token{
+					tokenType: STRING_LITERAL,
+					value:     "how are you",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
 	}
 	runTokenStreamTests(t, tests)
 }

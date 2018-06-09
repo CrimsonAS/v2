@@ -291,10 +291,8 @@ func (this *tokenStream) consumeString(char byte) *token {
 			case 'v':
 				c.value += "\v"
 
-			case 'a':
-				c.value += string(nc)
 			default:
-				panic(fmt.Sprintf("unrecognized escape sequence %c", nc))
+				c.value += string(nc)
 			}
 		} else {
 			c.value += string(nc)

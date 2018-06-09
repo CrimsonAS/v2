@@ -40,6 +40,7 @@ const (
 	NUMBER_OBJECT
 	STRING_OBJECT
 	FUNCTION_OBJECT
+	ARRAY_OBJECT
 )
 
 func (this valueObject) defineDefaultProperty(vm *vm, prop string, v value, lt int) bool {

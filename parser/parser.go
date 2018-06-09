@@ -50,13 +50,13 @@ func (this *parser) parseArrayLiteral() *ArrayLiteral {
 		case COMMA:
 			this.expect(COMMA)
 			if exp == nil {
-				n.vals = append(n.vals, nil)
+				n.Elements = append(n.Elements, nil)
 			} else {
 				exp = nil
 			}
 		default:
 			exp = this.parseAssignmentExpression()
-			n.vals = append(n.vals, exp)
+			n.Elements = append(n.Elements, exp)
 		}
 
 	}
@@ -684,7 +684,7 @@ func RecursivelyPrint(node Node) string {
 		return fmt.Sprintf("(unused) %s", RecursivelyPrint(n.X))
 	case *ArrayLiteral:
 		p := "[:\n"
-		for _, c := range n.vals {
+		for _, c := range n.Elements {
 			p += RecursivelyPrint(c) + "\n"
 		}
 		p += "]\n"

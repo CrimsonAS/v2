@@ -61,6 +61,7 @@ const (
 	PUSH_UNDEFINED // undefined
 	PUSH_NULL      // null
 	PUSH_NUMBER    // 5
+	PUSH_ARRAY     // [a, b, c...]
 	PUSH_BOOL      // true
 	PUSH_STRING    // "hello" (note: the string index is given via the odata)
 
@@ -195,6 +196,8 @@ func (this opcode) String() string {
 		return "PUSH null"
 	case PUSH_NUMBER:
 		return fmt.Sprintf("PUSH number(%f)", this.odata)
+	case PUSH_ARRAY:
+		return fmt.Sprintf("PUSH array(%f)", this.odata)
 	case PUSH_STRING:
 		return fmt.Sprintf("PUSH string(%d, \"%s\")", int(this.odata), stringtable[int(this.odata)])
 	case PUSH_BOOL:
@@ -272,6 +275,11 @@ func callBuiltinAddr(this *vm, params []*parser.IdentifierLiteral, addr int) fun
 func (this *vm) generateCodeForLiteral(node parser.Node) []opcode {
 	codebuf := []opcode{}
 	switch n := node.(type) {
+	case *parser.ArrayLiteral:
+		for _, elem := range n.Elements {
+			codebuf = append(codebuf, this.generateCode(elem)...)
+		}
+		codebuf = append(codebuf, newOpcode(PUSH_ARRAY, float64(len(n.Elements))))
 	case *parser.NumericLiteral:
 		codebuf = append(codebuf, newOpcode(PUSH_NUMBER, n.Float64Value()))
 	case *parser.TrueLiteral:
@@ -605,6 +613,8 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 			}
 		}
 		return codebuf
+	case *parser.ArrayLiteral:
+		return this.generateCodeForLiteral(n)
 	case *parser.NumericLiteral:
 		return this.generateCodeForLiteral(n)
 	case *parser.TrueLiteral:

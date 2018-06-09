@@ -112,8 +112,8 @@ func (this *NullLiteral) token() token {
 
 type ArrayLiteral struct {
 	Node
-	tok  token
-	vals []Node
+	tok      token
+	Elements []Node
 }
 
 func (this *ArrayLiteral) token() token {

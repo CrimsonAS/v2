@@ -70,7 +70,7 @@ const lookupDebug = false
 
 func (this *vm) setVar(name int, nv value) bool {
 	if execDebug {
-		//log.Printf("Storing %s in %s", v, stringtable[op.odata.asInt()])
+		log.Printf("Storing %s in %s", nv, stringtable[name])
 	}
 	sf := this.currentFrame
 	for sf != nil {
@@ -87,31 +87,34 @@ func (this *vm) setVar(name int, nv value) bool {
 }
 
 func (this *vm) findVar(name int) (value, bool) {
-	if execDebug {
-		//log.Printf("Loading %s from %d gave %s", stringtable[op.odata.asInt()], op.odata.asInt(), sv)
-	}
 	sf := this.currentFrame
 	for sf != nil {
 		for idx, sfvar := range sf.vars {
 			if sfvar == name {
+				if execDebug {
+					log.Printf("Loading %s gave %s", stringtable[name], sf.varValues[idx])
+				}
 				return sf.varValues[idx], true
 			}
 		}
 		sf = sf.outer
 	}
+	if execDebug {
+		log.Printf("Loading %s was not found", stringtable[name])
+	}
 	return nil, false
 }
 
 func (this *vm) defineVar(name int, v value) {
-	if execDebug {
-		//log.Printf("Var %s declared", stringtable[name])
-	}
 	for _, sfvar := range this.currentFrame.vars {
 		if sfvar == name {
 			panic(fmt.Sprintf("Var %s already defined", stringtable[name]))
 		}
 	}
 
+	if execDebug {
+		log.Printf("Var %s declared", stringtable[name])
+	}
 	this.currentFrame.vars = append(this.currentFrame.vars, name)
 	this.currentFrame.varValues = append(this.currentFrame.varValues, v)
 }
@@ -132,6 +135,7 @@ func New(code string) *vm {
 	vm.defineVar(appendStringtable("console"), defineConsoleObject(&vm))
 	vm.defineVar(appendStringtable("Math"), defineMathObject(&vm))
 	vm.defineVar(appendStringtable("Boolean"), defineBooleanCtor(&vm))
+	vm.defineVar(appendStringtable("Array"), defineArrayCtor(&vm))
 	vm.defineVar(appendStringtable("String"), defineStringCtor(&vm))
 
 	return &vm
@@ -218,6 +222,9 @@ func (this *vm) Run() value {
 			this.data_stack.push(newUndefined())
 		case PUSH_NULL:
 			this.data_stack.push(newNull())
+		case PUSH_ARRAY:
+			vals := this.data_stack.popSlice(op.odata.asInt())
+			this.data_stack.push(newArrayObject(vals))
 		case PUSH_NUMBER:
 			this.data_stack.push(newNumber(op.odata.asFloat64()))
 		case PUSH_STRING:

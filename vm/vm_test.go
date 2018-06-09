@@ -27,7 +27,6 @@
 package vm
 
 import (
-	_ "github.com/kr/pretty"
 	"github.com/stvp/assert"
 	"testing"
 )

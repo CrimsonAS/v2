@@ -70,30 +70,30 @@ func TestArrayLiterals(t *testing.T) {
 	ep1 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}}}}}
 	assert.Equal(t, Parse("[]", false), ep1)
 
-	ep2 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 1, col: 1}}}}}}}
+	ep2 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, Elements: []Node{&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 1, col: 1}}}}}}}
 	assert.Equal(t, Parse("[true]", false), ep2)
 
-	ep3 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
+	ep3 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, Elements: []Node{
 		&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 1, col: 1}},
 		&FalseLiteral{tok: token{tokenType: FALSE, value: "false", pos: 7, col: 7}},
 	}}}}}
 	assert.Equal(t, Parse("[true, false]", false), ep3)
 
-	ep4 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
+	ep4 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, Elements: []Node{
 		nil,
 		&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 3, col: 3}},
 		&FalseLiteral{tok: token{tokenType: FALSE, value: "false", pos: 9, col: 9}},
 	}}}}}
 	assert.Equal(t, Parse("[, true, false]", false), ep4)
 
-	ep5 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
+	ep5 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, Elements: []Node{
 		&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 1, col: 1}},
 		nil,
 		&FalseLiteral{tok: token{tokenType: FALSE, value: "false", pos: 9, col: 9}},
 	}}}}}
 	assert.Equal(t, Parse("[true, , false]", false), ep5)
 
-	ep6 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, vals: []Node{
+	ep6 := &Program{body: []Node{&ExpressionStatement{X: &ArrayLiteral{tok: token{tokenType: LBRACKET, value: ""}, Elements: []Node{
 		&TrueLiteral{tok: token{tokenType: TRUE, value: "true", pos: 1, col: 1}},
 		&FalseLiteral{tok: token{tokenType: FALSE, value: "false", pos: 9, col: 9}},
 	}}}}}

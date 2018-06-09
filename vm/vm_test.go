@@ -287,6 +287,10 @@ func TestForStatement(t *testing.T) {
 func TestReturnStatement(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
+			in:  "function f() { return; } var a; a = f(); a;",
+			out: newUndefined(),
+		},
+		simpleVMTest{
 			in:  "function f() { return 10; } var a; a = f(); a;",
 			out: newNumber(10),
 		},

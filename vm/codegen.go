@@ -341,7 +341,7 @@ func (this *vm) generateCodeForStatement(node parser.Node) []opcode {
 		if n.X != nil {
 			codebuf = append(codebuf, this.generateCode(n.X)...)
 		} else {
-			panic("should LOAD(undefined)")
+			codebuf = append(codebuf, simpleOp(PUSH_UNDEFINED))
 		}
 		codebuf = append(codebuf, simpleOp(RETURN))
 	case *parser.ForStatement:

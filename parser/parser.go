@@ -690,6 +690,15 @@ func (this *parser) parseSwitchStatement() Node {
 	return r
 }
 
+func (this *parser) parseThrowStatement() Node {
+	tok := this.expect(THROW)
+	x := this.parseExpression()
+	if this.stream.peek().tokenType == SEMICOLON {
+		this.expect(SEMICOLON)
+	}
+	return &ThrowStatement{tok: tok, X: x}
+}
+
 func (this *parser) parseStatement() Node {
 	tok := this.stream.peek()
 	switch tok.tokenType {
@@ -702,11 +711,13 @@ func (this *parser) parseStatement() Node {
 	case LBRACE:
 		return this.parseBlockStatement()
 	case DO:
-		fallthrough
+		return this.parseIterationStatement()
 	case WHILE:
-		fallthrough
+		return this.parseIterationStatement()
 	case FOR:
 		return this.parseIterationStatement()
+	case THROW:
+		return this.parseThrowStatement()
 	case SWITCH:
 		return this.parseSwitchStatement()
 	case SEMICOLON:

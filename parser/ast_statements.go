@@ -159,3 +159,12 @@ type ForInStatement struct {
 func (this *ForInStatement) token() token {
 	return this.tok
 }
+
+type ThrowStatement struct {
+	X   Node
+	tok token
+}
+
+func (this *ThrowStatement) token() token {
+	return this.tok
+}

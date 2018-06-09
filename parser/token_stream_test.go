@@ -898,6 +898,42 @@ func TestTokens(t *testing.T) {
 			},
 		},
 		tokenStreamTest{
+			input: "switch",
+			output: []token{
+				token{
+					tokenType: SWITCH,
+					value:     "switch",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "case",
+			output: []token{
+				token{
+					tokenType: CASE,
+					value:     "case",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "default",
+			output: []token{
+				token{
+					tokenType: DEFAULT,
+					value:     "default",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "throw",
+			output: []token{
+				token{
+					tokenType: THROW,
+					value:     "throw",
+				},
+			},
+		},
+		tokenStreamTest{
 			input: "for",
 			output: []token{
 				token{

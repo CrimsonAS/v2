@@ -29,6 +29,7 @@ package parser
 import (
 	"testing"
 
+	_ "github.com/kr/pretty"
 	"github.com/stvp/assert"
 )
 
@@ -462,4 +463,18 @@ func TestFunctionWithCall(t *testing.T) {
 	}
 
 	assert.Equal(t, Parse("function f() {}()", false), ep1)
+}
+
+func TestThrowStatement(t *testing.T) {
+	ep1 := &Program{body: []Node{
+		&ThrowStatement{
+			tok: token{tokenType: THROW, value: "throw", pos: 0, col: 0},
+			X: &IdentifierLiteral{
+				tok: token{tokenType: IDENTIFIER, value: "a", pos: 6, col: 6},
+			},
+		},
+	},
+	}
+
+	assert.Equal(t, Parse("throw a;", false), ep1)
 }

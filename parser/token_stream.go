@@ -129,6 +129,7 @@ const (
 	SWITCH
 	CASE
 	DEFAULT
+	THROW
 )
 
 type token struct {
@@ -251,6 +252,8 @@ func classifyIdentifier(id string) (TokenType, bool) {
 		return CASE, false
 	case "default":
 		return DEFAULT, false
+	case "throw":
+		return THROW, false
 	case "return":
 		return RETURN, false
 	case "this":

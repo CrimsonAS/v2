@@ -48,10 +48,11 @@ const (
 	BITWISE_XOR // a ^ b
 	BITWISE_OR  // a | b
 
-	UPLUS  // +a
-	UMINUS // -a
-	UNOT   // !a
-	TYPEOF // typeof a
+	UPLUS       // +a
+	UMINUS      // -a
+	UNOT        // !a
+	TYPEOF      // typeof a
+	BITWISE_NOT // ~a
 
 	// a % b
 	MODULUS
@@ -164,6 +165,8 @@ func (this opcode) String() string {
 		return "UNOT"
 	case TYPEOF:
 		return "TYPEOF"
+	case BITWISE_NOT:
+		return "BITWISE_NOT"
 	case SUB:
 		return "SUB"
 	case MULTIPLY:
@@ -490,6 +493,9 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 			case parser.TYPEOF:
 				codebuf = append(codebuf, this.generateCode(n.X)...)
 				codebuf = append(codebuf, simpleOp(TYPEOF))
+			case parser.BITWISE_NOT:
+				codebuf = append(codebuf, this.generateCode(n.X)...)
+				codebuf = append(codebuf, simpleOp(BITWISE_NOT))
 
 			// See the comment for postfix INCREMENT/DECREMENT.
 			case parser.INCREMENT:

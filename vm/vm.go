@@ -306,6 +306,9 @@ func (this *vm) Run() value {
 		case BITWISE_OR:
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newNumber(float64(vals[1].ToInteger() | vals[0].ToInteger())))
+		case BITWISE_NOT:
+			v := this.data_stack.pop()
+			this.data_stack.push(newNumber(float64(^v.ToInteger())))
 		case LESS_THAN:
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newBool(vals[1].ToNumber() < vals[0].ToNumber()))

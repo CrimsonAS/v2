@@ -172,6 +172,10 @@ func TestPrefixOperators(t *testing.T) {
 			in:  "-3",
 			out: newNumber(-3),
 		},
+		simpleVMTest{
+			in:  "~500",
+			out: newNumber(-501),
+		},
 	}
 
 	runSimpleVMTestHelper(t, tests)

@@ -28,7 +28,6 @@ package vm
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"strings"
 )
@@ -187,7 +186,6 @@ func string_prototype_toLowerCase(vm *vm, f value, args []value) value {
 	checkObjectCoercible(vm, f)
 	S := f.ToString().String()
 
-	log.Printf(strings.ToLower(S))
 	return newString(strings.ToLower(S))
 }
 

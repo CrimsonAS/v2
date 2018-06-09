@@ -259,6 +259,42 @@ func TestIdentifiers(t *testing.T) {
 				},
 			},
 		},
+		tokenStreamTest{
+			input: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+			output: []token{
+				token{
+					tokenType: IDENTIFIER,
+					value:     "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "a_test",
+			output: []token{
+				token{
+					tokenType: IDENTIFIER,
+					value:     "a_test",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "a1234567890",
+			output: []token{
+				token{
+					tokenType: IDENTIFIER,
+					value:     "a1234567890",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
 	}
 	runTokenStreamTests(t, tests)
 }

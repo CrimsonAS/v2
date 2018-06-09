@@ -232,8 +232,8 @@ func (this *tokenStream) consumeString(char byte) *token {
 	return c
 }
 
-func isIdentifier(c byte) bool {
-	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
+func isIdentifier(c byte, isFirstChar bool) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_') || (!isFirstChar && c >= '0' && c <= '9')
 }
 
 func classifyIdentifier(id string) (TokenType, bool) {
@@ -288,7 +288,7 @@ func (this *tokenStream) consumeIdentifier(firstCharacter byte) *token {
 	// these are off-by-one, as we read the first character already
 	c.pos -= 1
 	c.col -= 1
-	for !this.stream.eof() && isIdentifier(this.stream.peek()) {
+	for !this.stream.eof() && isIdentifier(this.stream.peek(), false) {
 		c.value += string(this.stream.next())
 	}
 
@@ -645,7 +645,7 @@ func (this *tokenStream) readNext() {
 		return
 	}
 
-	if isIdentifier(c) {
+	if isIdentifier(c, true) {
 		this.current = this.consumeIdentifier(c)
 		return
 	}

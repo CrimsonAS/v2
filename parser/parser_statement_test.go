@@ -340,6 +340,30 @@ func TestForStatement(t *testing.T) {
 	assert.Equal(t, Parse("for (var a = 1;;) { x }", false), ep3)
 }
 
+func TestForInStatement(t *testing.T) {
+	ep1 := &Program{body: []Node{
+		&ForInStatement{
+			tok: token{tokenType: FOR, value: "for"},
+			X: &VariableStatement{
+				Vars:         []*IdentifierLiteral{&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "i", pos: 9, col: 9}}},
+				Initializers: []Node{nil},
+				tok:          token{tokenType: VAR, value: "var", pos: 5, col: 5},
+			},
+			Y: &IdentifierLiteral{
+				tok: token{tokenType: IDENTIFIER, value: "k", pos: 14, col: 14},
+			},
+			Body: &BlockStatement{
+				tok: token{tokenType: LBRACE, pos: 17, col: 17},
+				Body: []Node{
+					&ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "x", pos: 19, col: 19}}},
+				},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse("for (var i in k) { x }", false), ep1)
+}
+
 func TestSwitchStatement(t *testing.T) {
 	ep1 := &Program{body: []Node{
 		&SwitchStatement{

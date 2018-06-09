@@ -598,21 +598,26 @@ func (this *parser) parseForStatement() Node {
 			init = this.parseExpression()
 		}
 	}
-	this.expect(SEMICOLON)
-	var test Node
-	if this.stream.peek().tokenType != SEMICOLON {
-		test = this.parseExpression()
-	}
-	this.expect(SEMICOLON)
-	var update Node
-	if this.stream.peek().tokenType != RPAREN {
-		update = this.parseExpression()
-	}
-	this.expect(RPAREN)
 
-	body := this.parseStatement()
-
-	return &ForStatement{tok: tok, Initializer: init, Test: test, Update: update, Body: body}
+	if this.stream.peek().tokenType == IN {
+		this.expect(IN)
+		Y := this.parseExpression()
+		this.expect(RPAREN)
+		return &ForInStatement{tok: tok, X: init, Y: Y, Body: this.parseStatement()}
+	} else {
+		this.expect(SEMICOLON)
+		var test Node
+		if this.stream.peek().tokenType != SEMICOLON {
+			test = this.parseExpression()
+		}
+		this.expect(SEMICOLON)
+		var update Node
+		if this.stream.peek().tokenType != RPAREN {
+			update = this.parseExpression()
+		}
+		this.expect(RPAREN)
+		return &ForStatement{tok: tok, Initializer: init, Test: test, Update: update, Body: this.parseStatement()}
+	}
 }
 
 func (this *parser) parseIterationStatement() Node {

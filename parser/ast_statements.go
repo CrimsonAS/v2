@@ -148,3 +148,14 @@ type ForStatement struct {
 func (this *ForStatement) token() token {
 	return this.tok
 }
+
+type ForInStatement struct {
+	X    Node
+	Y    Node
+	Body Node // ### statement
+	tok  token
+}
+
+func (this *ForInStatement) token() token {
+	return this.tok
+}

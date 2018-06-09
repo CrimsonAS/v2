@@ -43,7 +43,28 @@ func (this *NumericLiteral) String() string {
 	return this.tok.value
 }
 
+func hex2dec(chr byte) rune {
+	switch {
+	case '0' <= chr && chr <= '9':
+		return rune(chr - '0')
+	case 'a' <= chr && chr <= 'f':
+		return rune(chr - 'a' + 10)
+	case 'A' <= chr && chr <= 'F':
+		return rune(chr - 'A' + 10)
+	default:
+		panic("wtf")
+	}
+}
+
 func (this *NumericLiteral) Float64Value() float64 {
+	if len(this.tok.value) >= 3 && this.tok.value[0] == '0' && this.tok.value[1] == 'x' {
+		v := rune(0)
+		for i := 2; i < len(this.tok.value); i++ {
+			val := hex2dec(this.tok.value[i])
+			v = v<<4 | val
+		}
+		return float64(v)
+	}
 	v, _ := strconv.ParseFloat(this.tok.value, 64)
 	return v
 }

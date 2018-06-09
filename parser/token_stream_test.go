@@ -175,6 +175,30 @@ func TestNumberLiterals(t *testing.T) {
 				},
 			},
 		},
+		tokenStreamTest{
+			input: "0x0",
+			output: []token{
+				token{
+					tokenType: NUMERIC_LITERAL,
+					value:     "0x0",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "0x0123456789abcdef",
+			output: []token{
+				token{
+					tokenType: NUMERIC_LITERAL,
+					value:     "0x0123456789abcdef",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
 	}
 	runTokenStreamTests(t, tests)
 }

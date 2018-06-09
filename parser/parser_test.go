@@ -46,6 +46,7 @@ func TestLiterals(t *testing.T) {
 
 	ep2 := &Program{body: []Node{&ExpressionStatement{X: &NumericLiteral{tok: token{tokenType: NUMERIC_LITERAL, value: "123.45"}}}}}
 	assert.Equal(t, Parse("123.45", false), ep2)
+	assert.Equal(t, ep2.body[0].(*ExpressionStatement).X.(*NumericLiteral).Float64Value(), float64(123.45))
 
 	ep3 := &Program{body: []Node{&ExpressionStatement{X: &TrueLiteral{tok: token{tokenType: TRUE, value: "true"}}}}}
 	assert.Equal(t, Parse("true", false), ep3)
@@ -64,6 +65,10 @@ func TestLiterals(t *testing.T) {
 
 	ep8 := &Program{body: []Node{&ExpressionStatement{X: &ThisLiteral{tok: token{tokenType: THIS, value: "this", pos: 1, col: 1}}}}}
 	assert.Equal(t, Parse("(this)", false), ep8)
+
+	ep9 := &Program{body: []Node{&ExpressionStatement{X: &NumericLiteral{tok: token{tokenType: NUMERIC_LITERAL, value: "0xff"}}}}}
+	assert.Equal(t, Parse("0xff", false), ep9)
+	assert.Equal(t, ep9.body[0].(*ExpressionStatement).X.(*NumericLiteral).Float64Value(), float64(255))
 }
 
 func TestArrayLiterals(t *testing.T) {

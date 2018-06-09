@@ -26,6 +26,10 @@
 
 package parser
 
+import (
+	"log"
+)
+
 // A tokenStream consumes a byteStream to genereate tokens.
 type tokenStream struct {
 	stream         *byteStream
@@ -264,6 +268,9 @@ func (this *tokenStream) consumeIdentifier(firstCharacter byte) *token {
 func isDigit(c byte) bool {
 	return c >= '0' && c <= '9'
 }
+func isHexDigit(c byte) bool {
+	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+}
 
 // ### hex literals (es5 7.3.8) and probably more
 func (this *tokenStream) consumeNumber(firstDigit byte) *token {
@@ -274,6 +281,17 @@ func (this *tokenStream) consumeNumber(firstDigit byte) *token {
 	for !this.stream.eof() && isDigit(this.stream.peek()) {
 		c.value += string(this.stream.next())
 	}
+	if c.value == "0" && this.stream.peek() == 'x' {
+		c.value += string(this.stream.next()) // consume 'x'
+		for !this.stream.eof() && isHexDigit(this.stream.peek()) {
+			c.value += string(this.stream.next())
+		}
+	}
+
+	if c.value == "0x" {
+		panic("Unexpected hexadecimal value (no digits after 'x')")
+	}
+
 	if !this.stream.eof() && this.stream.peek() == '.' {
 		c.value += "."
 		this.stream.next() // consume dot
@@ -495,7 +513,12 @@ func (this *tokenStream) consumePunctuation(firstDigit byte) *token {
 	return c
 }
 
+const tokenDebug = false
+
 func (this *tokenStream) readNext() {
+	if tokenDebug {
+		defer func() { log.Printf("Read next token: %+v", this.current) }()
+	}
 	this.consumeWhitespace()
 
 	if this.stream.eof() {

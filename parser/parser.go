@@ -517,6 +517,9 @@ func (this *parser) parseReturnStatement() *ReturnStatement {
 		return n
 	}
 	n.X = this.parseExpression()
+	if this.stream.peek().tokenType == SEMICOLON {
+		this.expect(SEMICOLON)
+	}
 	return n
 }
 
@@ -619,7 +622,11 @@ func (this *parser) parseIterationStatement() Node {
 }
 
 func (this *parser) parseExpressionStatement() Node {
-	return &ExpressionStatement{X: this.parseExpression()}
+	r := &ExpressionStatement{X: this.parseExpression()}
+	if this.stream.peek().tokenType == SEMICOLON {
+		this.expect(SEMICOLON)
+	}
+	return r
 }
 
 func (this *parser) parseStatement() Node {

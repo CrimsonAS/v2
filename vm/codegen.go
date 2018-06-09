@@ -559,6 +559,8 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 				codebuf = append(codebuf, this.generateCode(lhs.X)...)
 				varIdx := appendStringtable(lhs.Name.String())
 				codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(varIdx)))
+			default:
+				panic(fmt.Sprintf("unknown left hand side for assignment %t", n.Left))
 			}
 		default:
 			panic(fmt.Sprintf("unknown operator %s", n.Operator()))

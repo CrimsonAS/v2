@@ -107,6 +107,36 @@ func TestSingleLineComments(t *testing.T) {
 	runTokenStreamTests(t, tests)
 }
 
+func TestMultiLineComments(t *testing.T) {
+	tests := []tokenStreamTest{
+		tokenStreamTest{
+			input: "/* Hello world */",
+			output: []token{
+				token{
+					tokenType: COMMENT,
+					value:     " Hello world ",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "/* Hello\nworld */",
+			output: []token{
+				token{
+					tokenType: COMMENT,
+					value:     " Hello\nworld ",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
+	}
+	runTokenStreamTests(t, tests)
+}
+
 func TestStringLiterals(t *testing.T) {
 	tests := []tokenStreamTest{
 		tokenStreamTest{

@@ -186,13 +186,35 @@ func (this *tokenStream) consumeSingleLineComment() *token {
 	return c
 }
 
+func (this *tokenStream) consumeMultiLineComment() *token {
+	c := this.createToken(COMMENT, "")
+	// these are off-by-one, as we read the first / already
+	c.pos -= 1
+	c.col -= 1
+	this.stream.next()
+	for !this.stream.eof() {
+		if this.stream.peek() == '*' {
+			c.value += string(this.stream.next())
+			if !this.stream.eof() && this.stream.peek() == '/' {
+				this.stream.next()                    // eat /
+				c.value = c.value[0 : len(c.value)-1] // strip * from text
+				return c
+			}
+		}
+		c.value += string(this.stream.next())
+	}
+	return c
+}
+
 func (this *tokenStream) consumeComment() *token {
-	if this.stream.peek() == '/' {
+	switch this.stream.peek() {
+	case '/':
 		return this.consumeSingleLineComment()
+	case '*':
+		return this.consumeMultiLineComment()
 	}
 
-	// ### multiline
-	panic("multiline comments not supported")
+	panic("unreachable")
 }
 
 // ### string escaping, single quoted strings, etc (es5 7.8.4)

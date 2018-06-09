@@ -36,26 +36,24 @@ import (
 type opcode_type uint8
 
 const (
-	// a + b
+	// Simple math operators
 	ADD opcode_type = iota
-
-	// +a
-	UPLUS
-
-	// -a
-	UMINUS
-
-	// !a
-	UNOT
-
-	// a - b
 	SUB
-
-	// a * b
 	MULTIPLY
-
-	// a / b
 	DIVIDE
+	LEFT_SHIFT
+	RIGHT_SHIFT
+	UNSIGNED_RIGHT_SHIFT
+	BITWISE_AND // a & b
+	BITWISE_XOR // a ^ b
+	BITWISE_OR  // a | b
+
+	UPLUS  // +a
+	UMINUS // -a
+	UNOT   // !a
+
+	// a % b
+	MODULUS
 
 	// These all push a given value to the stack.
 	PUSH_UNDEFINED // undefined
@@ -168,6 +166,20 @@ func (this opcode) String() string {
 		return "MUL"
 	case DIVIDE:
 		return "DIV"
+	case LEFT_SHIFT:
+		return "<<"
+	case RIGHT_SHIFT:
+		return ">>"
+	case UNSIGNED_RIGHT_SHIFT:
+		return ">>>"
+	case BITWISE_AND:
+		return "&"
+	case BITWISE_XOR:
+		return "^"
+	case BITWISE_OR:
+		return "|"
+	case MODULUS:
+		return "MOD"
 	case NEW_OBJECT:
 		return "NEW_OBJECT"
 	case DEFINE_PROPERTY:
@@ -516,60 +528,109 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 				panic(fmt.Sprintf("unknown postfix unary operator %s", n.Operator()))
 			}
 		}
-	case *parser.BinaryExpression:
+	case *parser.AssignmentExpression:
 		this.canConsume++
 		defer func() { this.canConsume = this.canConsume - 1 }()
+
+		var realOp opcode_type
+		codebuf = append(codebuf, this.generateCode(n.Right)...)
+
 		switch n.Operator() {
-		case parser.PLUS:
-			codebuf = append(codebuf, this.generateCode(n.Right)...)
-			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(ADD))
-		case parser.MINUS:
-			codebuf = append(codebuf, this.generateCode(n.Right)...)
-			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(SUB))
-		case parser.MULTIPLY:
-			codebuf = append(codebuf, this.generateCode(n.Right)...)
-			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(MULTIPLY))
-		case parser.DIVIDE:
-			codebuf = append(codebuf, this.generateCode(n.Right)...)
-			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(DIVIDE))
-		case parser.LESS_THAN:
-			codebuf = append(codebuf, this.generateCode(n.Right)...)
-			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(LESS_THAN))
-		case parser.GREATER_THAN:
-			codebuf = append(codebuf, this.generateCode(n.Right)...)
-			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(GREATER_THAN))
-		case parser.EQUALS:
-			codebuf = append(codebuf, this.generateCode(n.Right)...)
-			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(EQUALS))
-		case parser.NOT_EQUALS:
-			codebuf = append(codebuf, this.generateCode(n.Right)...)
-			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(NOT_EQUALS))
-		case parser.LESS_EQ:
-			codebuf = append(codebuf, this.generateCode(n.Right)...)
-			codebuf = append(codebuf, this.generateCode(n.Left)...)
-			codebuf = append(codebuf, simpleOp(LESS_THAN_EQ))
 		case parser.ASSIGNMENT:
+			realOp = STORE
+		case parser.PLUS_EQ:
+			realOp = ADD
+		case parser.MINUS_EQ:
+			realOp = SUB
+		case parser.MULTIPLY_EQ:
+			realOp = MULTIPLY
+		case parser.DIVIDE_EQ:
+			realOp = DIVIDE
+		case parser.MODULUS_EQ:
+			realOp = MODULUS
+		case parser.LEFT_SHIFT_EQ:
+			realOp = LEFT_SHIFT
+		case parser.RIGHT_SHIFT_EQ:
+			realOp = RIGHT_SHIFT
+		case parser.UNSIGNED_RIGHT_SHIFT_EQ:
+			realOp = UNSIGNED_RIGHT_SHIFT
+		case parser.AND_EQ:
+			realOp = BITWISE_AND
+		case parser.XOR_EQ:
+			realOp = BITWISE_XOR
+		case parser.OR_EQ:
+			realOp = BITWISE_OR
+		default:
+			panic(fmt.Sprintf("unknown operator %s", n.Operator()))
+		}
+
+		if realOp != STORE {
+			// If it isn't a direct assignment, load the left hand side, perform
+			// the op.
 			switch lhs := n.Left.(type) {
 			case *parser.IdentifierLiteral:
-				codebuf = append(codebuf, this.generateCode(n.Right)...)
 				varIdx := float64(appendStringtable(lhs.String()))
-				codebuf = append(codebuf, newOpcode(STORE, varIdx))
+				codebuf = append(codebuf, newOpcode(LOAD, varIdx))
 			case *parser.DotMemberExpression:
-				codebuf = append(codebuf, this.generateCode(n.Right)...)
 				codebuf = append(codebuf, this.generateCode(lhs.X)...)
 				varIdx := appendStringtable(lhs.Name.String())
-				codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(varIdx)))
+				codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(varIdx)))
 			default:
 				panic(fmt.Sprintf("unknown left hand side for assignment %t", n.Left))
 			}
+			codebuf = append(codebuf, simpleOp(realOp))
+		}
+
+		// Now store the result back to the left hand side.
+		switch lhs := n.Left.(type) {
+		case *parser.IdentifierLiteral:
+			varIdx := float64(appendStringtable(lhs.String()))
+			codebuf = append(codebuf, newOpcode(STORE, varIdx))
+		case *parser.DotMemberExpression:
+			codebuf = append(codebuf, this.generateCode(lhs.X)...)
+			varIdx := appendStringtable(lhs.Name.String())
+			codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(varIdx)))
+		default:
+			panic(fmt.Sprintf("unknown left hand side for assignment %t", n.Left))
+		}
+	case *parser.BinaryExpression:
+		this.canConsume++
+		defer func() { this.canConsume = this.canConsume - 1 }()
+		codebuf = append(codebuf, this.generateCode(n.Right)...)
+		codebuf = append(codebuf, this.generateCode(n.Left)...)
+		switch n.Operator() {
+		case parser.PLUS:
+			codebuf = append(codebuf, simpleOp(ADD))
+		case parser.MINUS:
+			codebuf = append(codebuf, simpleOp(SUB))
+		case parser.MULTIPLY:
+			codebuf = append(codebuf, simpleOp(MULTIPLY))
+		case parser.DIVIDE:
+			codebuf = append(codebuf, simpleOp(DIVIDE))
+		case parser.LEFT_SHIFT:
+			codebuf = append(codebuf, simpleOp(LEFT_SHIFT))
+		case parser.RIGHT_SHIFT:
+			codebuf = append(codebuf, simpleOp(RIGHT_SHIFT))
+		case parser.UNSIGNED_RIGHT_SHIFT:
+			codebuf = append(codebuf, simpleOp(UNSIGNED_RIGHT_SHIFT))
+		case parser.BITWISE_AND:
+			codebuf = append(codebuf, simpleOp(BITWISE_AND))
+		case parser.BITWISE_XOR:
+			codebuf = append(codebuf, simpleOp(BITWISE_XOR))
+		case parser.BITWISE_OR:
+			codebuf = append(codebuf, simpleOp(BITWISE_OR))
+		case parser.MODULUS:
+			codebuf = append(codebuf, simpleOp(MODULUS))
+		case parser.LESS_THAN:
+			codebuf = append(codebuf, simpleOp(LESS_THAN))
+		case parser.GREATER_THAN:
+			codebuf = append(codebuf, simpleOp(GREATER_THAN))
+		case parser.EQUALS:
+			codebuf = append(codebuf, simpleOp(EQUALS))
+		case parser.NOT_EQUALS:
+			codebuf = append(codebuf, simpleOp(NOT_EQUALS))
+		case parser.LESS_EQ:
+			codebuf = append(codebuf, simpleOp(LESS_THAN_EQ))
 		default:
 			panic(fmt.Sprintf("unknown operator %s", n.Operator()))
 		}
@@ -658,6 +719,8 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 	case *parser.IdentifierLiteral:
 		return this.generateCodeForExpression(n)
 	case *parser.UnaryExpression:
+		return this.generateCodeForExpression(n)
+	case *parser.AssignmentExpression:
 		return this.generateCodeForExpression(n)
 	case *parser.BinaryExpression:
 		return this.generateCodeForExpression(n)

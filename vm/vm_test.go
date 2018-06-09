@@ -59,6 +59,7 @@ func TestStrings(t *testing.T) {
 
 	runSimpleVMTestHelper(t, tests)
 }
+
 func TestPostfixOperators(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
@@ -76,6 +77,61 @@ func TestPostfixOperators(t *testing.T) {
 		simpleVMTest{
 			in:  "var a = 0; var b = 1; a = b++; b",
 			out: newNumber(2),
+		},
+	}
+
+	runSimpleVMTestHelper(t, tests)
+}
+
+func TestAssignmentOperators(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = 0; a = 1; a",
+			out: newNumber(1),
+		},
+		simpleVMTest{
+			in:  "var a = 0; a += 1; a",
+			out: newNumber(1),
+		},
+		simpleVMTest{
+			in:  "var a = 1; a /= 2; a",
+			out: newNumber(0.5),
+		},
+		simpleVMTest{
+			in:  "var a = 1; a *= 2; a",
+			out: newNumber(2),
+		},
+		simpleVMTest{
+			in:  "var a = 1; a *= 2; a",
+			out: newNumber(2),
+		},
+		simpleVMTest{
+			in:  "var a = 5; a %= 2; a",
+			out: newNumber(1),
+		},
+		simpleVMTest{
+			in:  "var a = 5; a <<= 2; a",
+			out: newNumber(20),
+		},
+		simpleVMTest{
+			in:  "var a = 5; a >>= 1; a",
+			out: newNumber(2),
+		},
+		simpleVMTest{
+			in:  "var a = 5; a >>>= 1; a",
+			out: newNumber(2),
+		},
+		simpleVMTest{
+			in:  "var a = 55; a &= 123124; a",
+			out: newNumber(52),
+		},
+		simpleVMTest{
+			in:  "var a = 55; a ^= 123124; a",
+			out: newNumber(123075),
+		},
+		simpleVMTest{
+			in:  "var a = 55; a |= 123124; a",
+			out: newNumber(123127),
 		},
 	}
 

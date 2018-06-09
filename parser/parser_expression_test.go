@@ -34,7 +34,7 @@ import (
 )
 
 func TestFunctionExpression(t *testing.T) {
-	ep1 := &Program{body: []Node{&BinaryExpression{
+	ep1 := &Program{body: []Node{&AssignmentExpression{
 		tok:  token{tokenType: ASSIGNMENT, value: "", col: 2, pos: 2},
 		Left: &ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}},
 		Right: &FunctionExpression{tok: token{tokenType: FUNCTION, value: "function", col: 4, pos: 4},
@@ -48,7 +48,7 @@ func TestFunctionExpression(t *testing.T) {
 	//assert.Equal(t, Parse("a = function() { true }", false), ep1)
 	assert.Equal(t, fmt.Sprintf("%s", RecursivelyPrint(Parse("a = function() { true }", false))), fmt.Sprintf("%s", RecursivelyPrint(ep1)))
 
-	ep2 := &Program{body: []Node{&BinaryExpression{
+	ep2 := &Program{body: []Node{&AssignmentExpression{
 		tok:  token{tokenType: ASSIGNMENT, value: "", col: 2, pos: 2},
 		Left: &ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}},
 		Right: &FunctionExpression{tok: token{tokenType: FUNCTION, value: "function", col: 4, pos: 4},
@@ -63,7 +63,7 @@ func TestFunctionExpression(t *testing.T) {
 	//assert.Equal(t, Parse("a = function() { true }", false), ep1)
 	assert.Equal(t, fmt.Sprintf("%s", RecursivelyPrint(Parse("a = function(b) { true }", false))), fmt.Sprintf("%s", RecursivelyPrint(ep2)))
 
-	ep3 := &Program{body: []Node{&BinaryExpression{
+	ep3 := &Program{body: []Node{&AssignmentExpression{
 		tok:  token{tokenType: ASSIGNMENT, value: "", col: 2, pos: 2},
 		Left: &ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}}},
 		Right: &FunctionExpression{tok: token{tokenType: FUNCTION, value: "function", col: 4, pos: 4},
@@ -241,6 +241,107 @@ func TestUnaryExpression(t *testing.T) {
 	}
 }
 
+func TestAssignmentExpression(t *testing.T) {
+	type ut struct {
+		tokenString string
+		tokenType   TokenType
+		ipos        int
+		icol        int
+	}
+
+	tests := []ut{}
+	tests = append(tests,
+		ut{
+			tokenString: "=",
+			tokenType:   ASSIGNMENT,
+			ipos:        4,
+			icol:        4,
+		},
+		ut{
+			tokenString: "+=",
+			tokenType:   PLUS_EQ,
+			ipos:        5,
+			icol:        5,
+		},
+		ut{
+			tokenString: "-=",
+			tokenType:   MINUS_EQ,
+			ipos:        5,
+			icol:        5,
+		},
+		ut{
+			tokenString: "*=",
+			tokenType:   MULTIPLY_EQ,
+			ipos:        5,
+			icol:        5,
+		},
+		ut{
+			tokenString: "/=",
+			tokenType:   DIVIDE_EQ,
+			ipos:        5,
+			icol:        5,
+		},
+		ut{
+			tokenString: "%=",
+			tokenType:   MODULUS_EQ,
+			ipos:        5,
+			icol:        5,
+		},
+		ut{
+			tokenString: "<<=",
+			tokenType:   LEFT_SHIFT_EQ,
+			ipos:        6,
+			icol:        6,
+		},
+		ut{
+			tokenString: ">>=",
+			tokenType:   RIGHT_SHIFT_EQ,
+			ipos:        6,
+			icol:        6,
+		},
+		ut{
+			tokenString: ">>>=",
+			tokenType:   UNSIGNED_RIGHT_SHIFT_EQ,
+			ipos:        7,
+			icol:        7,
+		},
+		ut{
+			tokenString: "&=",
+			tokenType:   AND_EQ,
+			ipos:        5,
+			icol:        5,
+		},
+		ut{
+			tokenString: "^=",
+			tokenType:   XOR_EQ,
+			ipos:        5,
+			icol:        5,
+		},
+		ut{
+			tokenString: "|=",
+			tokenType:   OR_EQ,
+			ipos:        5,
+			icol:        5,
+		},
+	)
+
+	for _, test := range tests {
+		ep1 := &Program{body: []Node{
+			&ExpressionStatement{X: &AssignmentExpression{
+				tok: token{tokenType: test.tokenType, value: "", pos: 2, col: 2},
+				Left: &IdentifierLiteral{
+					tok: token{tokenType: IDENTIFIER, value: "i"},
+				},
+				Right: &IdentifierLiteral{
+					tok: token{tokenType: IDENTIFIER, value: "i", pos: test.ipos, col: test.icol},
+				},
+			},
+			}}}
+		assert.Equal(t, Parse("i "+test.tokenString+" i", false), ep1)
+		t.Logf("%s", fmt.Sprintf("Passed i %s i", test.tokenString))
+	}
+}
+
 func TestSimpleBinaryExpression(t *testing.T) {
 	type ut struct {
 		tokenString string
@@ -352,12 +453,6 @@ func TestSimpleBinaryExpression(t *testing.T) {
 			tokenType:   LOGICAL_OR,
 			ipos:        5,
 			icol:        5,
-		},
-		ut{
-			tokenString: "=",
-			tokenType:   ASSIGNMENT,
-			ipos:        4,
-			icol:        4,
 		},
 		ut{
 			tokenString: "<",

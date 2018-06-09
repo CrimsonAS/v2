@@ -425,6 +425,8 @@ func (this *parser) parseAssignmentExpression() Node {
 		fallthrough
 	case MINUS_EQ:
 		fallthrough
+	case MULTIPLY_EQ:
+		fallthrough
 	case DIVIDE_EQ:
 		fallthrough
 	case MODULUS_EQ:
@@ -440,11 +442,11 @@ func (this *parser) parseAssignmentExpression() Node {
 	case XOR_EQ:
 		fallthrough
 	case OR_EQ:
-		panic("unhandled assignment operator")
+		fallthrough
 	case ASSIGNMENT:
 		this.expect(tok.tokenType)
 		right := this.parseConditionalExpression()
-		return &BinaryExpression{tok: tok, Left: left, Right: right}
+		return &AssignmentExpression{tok: tok, Left: left, Right: right}
 	}
 	return left
 }
@@ -782,6 +784,35 @@ func RecursivelyPrint(node Node) string {
 		return ";"
 	case *ConditionalExpression:
 		return fmt.Sprintf("%s ? %s : %s", RecursivelyPrint(n.X), RecursivelyPrint(n.Then), RecursivelyPrint(n.Else))
+	case *AssignmentExpression:
+		switch n.token().tokenType {
+		case ASSIGNMENT:
+			return fmt.Sprintf("%s = %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case PLUS_EQ:
+			return fmt.Sprintf("%s += %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case MINUS_EQ:
+			return fmt.Sprintf("%s -= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case MULTIPLY_EQ:
+			return fmt.Sprintf("%s *= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case DIVIDE_EQ:
+			return fmt.Sprintf("%s /= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case MODULUS_EQ:
+			return fmt.Sprintf("%s %%= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case LEFT_SHIFT_EQ:
+			return fmt.Sprintf("%s <<= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case RIGHT_SHIFT_EQ:
+			return fmt.Sprintf("%s >>= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case UNSIGNED_RIGHT_SHIFT_EQ:
+			return fmt.Sprintf("%s >>>= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case AND_EQ:
+			return fmt.Sprintf("%s &= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case XOR_EQ:
+			return fmt.Sprintf("%s ^= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case OR_EQ:
+			return fmt.Sprintf("%s |= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		default:
+			panic(fmt.Sprintf("unknown assignment expression %s", node.token().tokenType))
+		}
 	case *BinaryExpression:
 		switch n.token().tokenType {
 		case MULTIPLY:
@@ -818,8 +849,6 @@ func RecursivelyPrint(node Node) string {
 			return fmt.Sprintf("%s && %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case LOGICAL_OR:
 			return fmt.Sprintf("%s || %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
-		case ASSIGNMENT:
-			return fmt.Sprintf("%s = %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case LESS_THAN:
 			return fmt.Sprintf("%s < %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case GREATER_THAN:
@@ -833,7 +862,6 @@ func RecursivelyPrint(node Node) string {
 		default:
 			panic(fmt.Sprintf("unknown binary expression %s", node.token().tokenType))
 		}
-
 	case *EmptyStatement:
 		return ";"
 	case *ObjectLiteral:

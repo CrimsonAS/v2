@@ -283,6 +283,28 @@ func (this *vm) Run() value {
 		case DIVIDE:
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newNumber(vals[1].ToNumber() / vals[0].ToNumber()))
+		case MODULUS:
+			vals := this.data_stack.popSlice(2)
+			// ### using math is probably going to hurt performance?
+			this.data_stack.push(newNumber(math.Mod(vals[1].ToNumber(), vals[0].ToNumber())))
+		case LEFT_SHIFT:
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newNumber(float64(vals[1].ToInteger() << uint(vals[0].ToInteger()))))
+		case RIGHT_SHIFT:
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newNumber(float64(vals[1].ToInteger() >> uint(vals[0].ToInteger()))))
+		case UNSIGNED_RIGHT_SHIFT:
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newNumber(float64(uint32(vals[1].ToInteger()) >> uint(vals[0].ToInteger()))))
+		case BITWISE_AND:
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newNumber(float64(vals[1].ToInteger() & vals[0].ToInteger())))
+		case BITWISE_XOR:
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newNumber(float64(vals[1].ToInteger() ^ vals[0].ToInteger())))
+		case BITWISE_OR:
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newNumber(float64(vals[1].ToInteger() | vals[0].ToInteger())))
 		case LESS_THAN:
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newBool(vals[1].ToNumber() < vals[0].ToNumber()))

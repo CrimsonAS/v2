@@ -97,6 +97,21 @@ func (this *UnaryExpression) IsPostfix() bool {
 	return this.postfix
 }
 
+type AssignmentExpression struct {
+	Node
+	tok   token
+	Left  Node // ### Exp
+	Right Node // ### Exp
+}
+
+func (this *AssignmentExpression) Operator() TokenType {
+	return TokenType(this.tok.tokenType)
+}
+
+func (this *AssignmentExpression) token() token {
+	return this.tok
+}
+
 type BinaryExpression struct {
 	Node
 	tok   token

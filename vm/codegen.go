@@ -56,6 +56,7 @@ const (
 	MODULUS
 
 	// These all push a given value to the stack.
+	LOAD_THIS      // 'this'
 	PUSH_UNDEFINED // undefined
 	PUSH_NULL      // null
 	PUSH_NUMBER    // 5
@@ -202,6 +203,8 @@ func (this opcode) String() string {
 		return "=="
 	case NOT_EQUALS:
 		return "!="
+	case LOAD_THIS:
+		return "LOAD this"
 	case PUSH_UNDEFINED:
 		return "PUSH undefined"
 	case PUSH_NULL:
@@ -298,6 +301,8 @@ func (this *vm) generateCodeForLiteral(node parser.Node) []opcode {
 		codebuf = append(codebuf, newOpcode(PUSH_BOOL, 1))
 	case *parser.FalseLiteral:
 		codebuf = append(codebuf, newOpcode(PUSH_BOOL, 0))
+	case *parser.ThisLiteral:
+		codebuf = append(codebuf, newOpcode(LOAD_THIS, 0))
 	case *parser.NullLiteral:
 		codebuf = append(codebuf, simpleOp(PUSH_NULL))
 	case *parser.ObjectLiteral:
@@ -576,7 +581,7 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 				varIdx := appendStringtable(lhs.Name.String())
 				codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(varIdx)))
 			default:
-				panic(fmt.Sprintf("unknown left hand side for assignment %t", n.Left))
+				panic(fmt.Sprintf("unknown left hand side for assignment %T", n.Left))
 			}
 			codebuf = append(codebuf, simpleOp(realOp))
 		}
@@ -590,8 +595,10 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 			codebuf = append(codebuf, this.generateCode(lhs.X)...)
 			varIdx := appendStringtable(lhs.Name.String())
 			codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(varIdx)))
+		case *parser.BracketMemberExpression:
+			// ### logged above
 		default:
-			panic(fmt.Sprintf("unknown left hand side for assignment %t", n.Left))
+			panic(fmt.Sprintf("unknown left hand side for assignment %T", n.Left))
 		}
 	case *parser.BinaryExpression:
 		this.canConsume++
@@ -685,6 +692,8 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 	case *parser.NullLiteral:
 		return this.generateCodeForLiteral(n)
 	case *parser.ObjectLiteral:
+		return this.generateCodeForLiteral(n)
+	case *parser.ThisLiteral:
 		return this.generateCodeForLiteral(n)
 
 	case *parser.VariableStatement:

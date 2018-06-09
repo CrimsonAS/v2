@@ -38,6 +38,7 @@ type stackFrame struct {
 	vars      []int
 	varValues []value
 	outer     *stackFrame
+	thisArg   value
 }
 
 var stringtable []string
@@ -63,7 +64,7 @@ type vm struct {
 	ignoreReturn  bool
 	isNew         int
 	canConsume    int
-	thisArg       value
+	lastLoadedVar value
 }
 
 const lookupDebug = false
@@ -119,15 +120,15 @@ func (this *vm) defineVar(name int, v value) {
 	this.currentFrame.varValues = append(this.currentFrame.varValues, v)
 }
 
-func makeStackFrame(returnAddr int, outer *stackFrame) stackFrame {
-	return stackFrame{retAddr: returnAddr, outer: outer}
+func makeStackFrame(thisArg value, returnAddr int, outer *stackFrame) stackFrame {
+	return stackFrame{retAddr: returnAddr, outer: outer, thisArg: thisArg}
 }
 
 func New(code string) *vm {
 	ast := parser.Parse(code, true /* ignore comments */)
 
 	vm := vm{stack{}, []stackFrame{}, nil, []opcode{}, 0, nil, nil, false, 0, 0, nil}
-	vm.stack = []stackFrame{makeStackFrame(0, nil)}
+	vm.stack = []stackFrame{makeStackFrame(newUndefined(), 0, nil)}
 	vm.currentFrame = &vm.stack[0]
 	vm.code = vm.generateCode(ast)
 
@@ -397,8 +398,14 @@ func (this *vm) Run() value {
 			if !ok {
 				panic("var not found")
 			}
-			this.thisArg = sv
+			this.lastLoadedVar = sv
 			this.data_stack.push(sv)
+		case LOAD_THIS:
+			// ### 'this' should be valid in global contexts too, but isn't currently.
+			if this.currentFrame.thisArg == nil {
+				panic("'this' in global context not yet supported...")
+			}
+			this.data_stack.push(this.currentFrame.thisArg)
 		default:
 			panic(fmt.Sprintf("unhandled opcode %+v", op))
 		}
@@ -420,14 +427,14 @@ func (this *vm) handleCall(op opcode, isNew bool) {
 
 	fo := fn.(valueObject)
 
-	sf := makeStackFrame(this.ip, this.currentFrame)
+	sf := makeStackFrame(this.lastLoadedVar, this.ip, this.currentFrame)
 	this.pushStack(sf)
 
 	var rval value
 	if isNew {
-		rval = fo.construct(this, this.thisArg, builtinArgs)
+		rval = fo.construct(this, this.lastLoadedVar, builtinArgs)
 	} else {
-		rval = fo.call(this, this.thisArg, builtinArgs)
+		rval = fo.call(this, this.lastLoadedVar, builtinArgs)
 	}
 
 	if this.ignoreReturn {

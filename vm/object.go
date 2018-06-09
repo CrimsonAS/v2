@@ -230,14 +230,14 @@ func (this valueObject) put(vm *vm, prop string, v value, throw bool) {
 	}
 
 	ownDesc := this.getOwnProperty(vm, prop)
-	if ownDesc.isDataDescriptor() {
+	if ownDesc != nil && ownDesc.isDataDescriptor() {
 		valueDesc := &propertyDescriptor{value: v, hasValue: true}
 		this.defineOwnProperty(vm, prop, valueDesc, throw)
 		return
 	}
 
 	desc := this.getProperty(vm, prop)
-	if desc.isAccessorDescriptor() {
+	if desc != nil && desc.isAccessorDescriptor() {
 		desc.set(vm, this, prop, desc, v)
 	} else {
 		newDesc := &propertyDescriptor{value: v, hasValue: true, writable: true, hasWritable: true, enumerable: true, hasEnumerable: true, configurable: true, hasConfigurable: true}

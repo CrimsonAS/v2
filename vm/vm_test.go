@@ -279,6 +279,19 @@ func TestCall(t *testing.T) {
 	runSimpleVMTestHelper(t, tests)
 }
 
+func TestThis(t *testing.T) {
+	// Roundabout way of checking that 'this' actually works, since returning
+	// 'this' gives us no easy way to check it's the right thing...
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "function f() { return this.a }; f.a = 42; f();",
+			out: newNumber(42),
+		},
+	}
+
+	runSimpleVMTestHelper(t, tests)
+}
+
 func TestVar(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{

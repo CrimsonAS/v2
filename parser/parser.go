@@ -445,7 +445,7 @@ func (this *parser) parseAssignmentExpression() Node {
 		fallthrough
 	case ASSIGNMENT:
 		this.expect(tok.tokenType)
-		right := this.parseConditionalExpression()
+		right := this.parseAssignmentExpression()
 		return &AssignmentExpression{tok: tok, Left: left, Right: right}
 	}
 	return left

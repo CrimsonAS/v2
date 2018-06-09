@@ -406,6 +406,29 @@ func (this *vm) Run() value {
 				panic("'this' in global context not yet supported...")
 			}
 			this.data_stack.push(this.currentFrame.thisArg)
+		case TYPEOF:
+			v := this.data_stack.pop()
+
+			// ### does the value interface need another member?
+			switch n := v.(type) {
+			case valueUndefined:
+				this.data_stack.push(newString("undefined"))
+			case valueNull:
+				this.data_stack.push(newString("object"))
+			case valueBool:
+				this.data_stack.push(newString("boolean"))
+			case valueNumber:
+				this.data_stack.push(newString("number"))
+			case valueString:
+				this.data_stack.push(newString("string"))
+			case valueObject:
+				switch n.odata.objectType {
+				case FUNCTION_OBJECT:
+					this.data_stack.push(newString("function"))
+				default:
+					this.data_stack.push(newString("object"))
+				}
+			}
 		default:
 			panic(fmt.Sprintf("unhandled opcode %+v", op))
 		}

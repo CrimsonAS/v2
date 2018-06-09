@@ -292,6 +292,43 @@ func TestThis(t *testing.T) {
 	runSimpleVMTestHelper(t, tests)
 }
 
+func TestTypeof(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var v = undefined; typeof v",
+			out: newString("undefined"),
+		},
+		simpleVMTest{
+			in:  "var v = null; typeof v",
+			out: newString("object"),
+		},
+		simpleVMTest{
+			in:  "var v = true; typeof v",
+			out: newString("boolean"),
+		},
+		simpleVMTest{
+			in:  "var v = 5; typeof v",
+			out: newString("number"),
+		},
+		simpleVMTest{
+			in:  "var v = 'test'; typeof v",
+			out: newString("string"),
+		},
+		simpleVMTest{
+			in:  "var v = new Array(); typeof v",
+			out: newString("object"),
+		},
+		simpleVMTest{
+			// ### these should be equivilent, but are not.
+			//in:  "var v = function() {}; typeof v",
+			in:  "function v() {}; typeof v",
+			out: newString("function"),
+		},
+	}
+
+	runSimpleVMTestHelper(t, tests)
+}
+
 func TestVar(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{

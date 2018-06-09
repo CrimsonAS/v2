@@ -51,6 +51,7 @@ const (
 	UPLUS  // +a
 	UMINUS // -a
 	UNOT   // !a
+	TYPEOF // typeof a
 
 	// a % b
 	MODULUS
@@ -161,6 +162,8 @@ func (this opcode) String() string {
 		return "UMINUS"
 	case UNOT:
 		return "UNOT"
+	case TYPEOF:
+		return "TYPEOF"
 	case SUB:
 		return "SUB"
 	case MULTIPLY:
@@ -484,6 +487,9 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 			case parser.LOGICAL_NOT:
 				codebuf = append(codebuf, this.generateCode(n.X)...)
 				codebuf = append(codebuf, simpleOp(UNOT))
+			case parser.TYPEOF:
+				codebuf = append(codebuf, this.generateCode(n.X)...)
+				codebuf = append(codebuf, simpleOp(TYPEOF))
 
 			// See the comment for postfix INCREMENT/DECREMENT.
 			case parser.INCREMENT:

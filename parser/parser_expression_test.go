@@ -572,6 +572,7 @@ func TestRegExpLiterals(t *testing.T) {
 				&RegExpLiteral{tok: token{tokenType: DIVIDE, pos: 11, col: 11}, RegExp: `(?:^|\s+)ba(?:\s+|$)`, Flags: NoFlagsRegExp},
 			},
 		},
+		&EmptyStatement{tok: token{tokenType: SEMICOLON, pos: 33, col: 33}},
 	},
 	}
 	assert.Equal(t, Parse(`var re19 = /(?:^|\s+)ba(?:\s+|$)/;`, false), ep2)

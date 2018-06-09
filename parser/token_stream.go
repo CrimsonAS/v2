@@ -842,10 +842,10 @@ func (this *tokenStream) scanRegExp(eq bool) (tokenText string, patternFlags Reg
 						panic(fmt.Sprintf("Bad regular expression flag %c", currChar))
 					}
 					patternFlags |= flag
+					currChar = this.stream.next() // consumed this one
 					if this.stream.eof() {
 						break
 					}
-					currChar = this.stream.next() // consumed this one
 					currChar = this.stream.peek() // look at this one
 				}
 			}

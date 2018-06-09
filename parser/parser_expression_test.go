@@ -526,3 +526,23 @@ func TestConditionalExpression(t *testing.T) {
 		}}}
 	assert.Equal(t, Parse("a?b:c", false), ep1)
 }
+
+func TestSequenceExpression(t *testing.T) {
+	ep1 := &Program{body: []Node{
+		&ExpressionStatement{X: &SequenceExpression{
+			tok: token{tokenType: COMMA, value: "", pos: 1, col: 1},
+			Seq: []Node{
+				&IdentifierLiteral{
+					tok: token{tokenType: IDENTIFIER, value: "a"},
+				},
+				&IdentifierLiteral{
+					tok: token{tokenType: IDENTIFIER, value: "b", pos: 2, col: 2},
+				},
+				&IdentifierLiteral{
+					tok: token{tokenType: IDENTIFIER, value: "c", pos: 4, col: 4},
+				},
+			},
+		},
+		}}}
+	assert.Equal(t, Parse("a,b,c", false), ep1)
+}

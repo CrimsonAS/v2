@@ -161,3 +161,13 @@ type CallExpression struct {
 func (this *CallExpression) token() token {
 	return this.tok
 }
+
+type SequenceExpression struct {
+	Node
+	tok token
+	Seq []Node
+}
+
+func (this *SequenceExpression) token() token {
+	return this.tok
+}

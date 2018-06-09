@@ -458,7 +458,13 @@ func (this *parser) parseExpression() Node {
 
 	tok := this.stream.peek()
 	if tok.tokenType == COMMA {
-		panic("sequence expression not implemented")
+		seq := []Node{left}
+		for this.stream.peek().tokenType == COMMA {
+			this.expect(COMMA)
+			seq = append(seq, this.parseAssignmentExpression())
+		}
+
+		return &SequenceExpression{tok: tok, Seq: seq}
 	}
 	return left
 }

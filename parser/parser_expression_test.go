@@ -484,6 +484,12 @@ func TestSimpleBinaryExpression(t *testing.T) {
 			ipos:        13,
 			icol:        13,
 		},
+		ut{
+			tokenString: "in",
+			tokenType:   IN,
+			ipos:        5,
+			icol:        5,
+		},
 	)
 
 	for _, test := range tests {

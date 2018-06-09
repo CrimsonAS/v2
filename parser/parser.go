@@ -307,6 +307,8 @@ func (this *parser) parseRelationalExpression() Node {
 		fallthrough
 	case GREATER_EQ:
 		fallthrough
+	case IN:
+		fallthrough
 	case INSTANCEOF:
 		this.expect(tok.tokenType)
 		right := this.parseShiftExpression()

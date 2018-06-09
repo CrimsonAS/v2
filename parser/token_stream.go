@@ -126,6 +126,9 @@ const (
 	// Flow control
 	IF
 	ELSE
+	SWITCH
+	CASE
+	DEFAULT
 )
 
 type token struct {
@@ -242,6 +245,12 @@ func classifyIdentifier(id string) (TokenType, bool) {
 		return IF, false
 	case "else":
 		return ELSE, false
+	case "switch":
+		return SWITCH, false
+	case "case":
+		return CASE, false
+	case "default":
+		return DEFAULT, false
 	case "return":
 		return RETURN, false
 	case "this":

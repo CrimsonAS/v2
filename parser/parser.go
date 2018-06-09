@@ -525,13 +525,19 @@ func (this *parser) parseReturnStatement() *ReturnStatement {
 	return n
 }
 
+func (this *parser) parseBlockStatementBody() []Node {
+	ret := []Node{}
+
+	// CASE/DEFAULT checks are because this is also used to read a switch case body.
+	for this.stream.peek().tokenType != RBRACE && this.stream.peek().tokenType != CASE && this.stream.peek().tokenType != DEFAULT {
+		ret = append(ret, this.parseStatement())
+	}
+	return ret
+}
+
 func (this *parser) parseBlockStatement() *BlockStatement {
 	tok := this.expect(LBRACE)
-	n := &BlockStatement{tok: tok}
-	for this.stream.peek().tokenType != RBRACE {
-		stmt := this.parseStatement()
-		n.Body = append(n.Body, stmt)
-	}
+	n := &BlockStatement{tok: tok, Body: this.parseBlockStatementBody()}
 	this.expect(RBRACE)
 	return n
 }
@@ -631,6 +637,45 @@ func (this *parser) parseExpressionStatement() Node {
 	return r
 }
 
+func (this *parser) parseSwitchStatement() Node {
+	r := &SwitchStatement{tok: this.expect(SWITCH)}
+	this.expect(LPAREN)
+	r.X = this.parseExpression()
+	this.expect(RPAREN)
+	this.expect(LBRACE)
+
+	hasDefault := false
+	for this.stream.peek().tokenType != RBRACE {
+		isDefault := false
+		var expr Node
+		switch this.stream.peek().tokenType {
+		case CASE:
+			this.expect(CASE)
+			expr = this.parseExpression()
+		case DEFAULT:
+			if hasDefault {
+				panic("already got a default case in switch")
+			}
+			this.expect(DEFAULT)
+			isDefault = true
+		default:
+			panic(fmt.Sprintf("unexpected token in switch %s %s", this.stream.peek().tokenType, this.stream.peek().value))
+		}
+
+		this.expect(COLON)
+
+		// this will stop at CASE, DEFAULT or }
+		body := this.parseBlockStatementBody()
+		r.Cases = append(r.Cases, &CaseStatement{X: expr, Body: body, IsDefault: isDefault})
+		if isDefault {
+			hasDefault = true
+		}
+	}
+
+	this.expect(RBRACE)
+	return r
+}
+
 func (this *parser) parseStatement() Node {
 	tok := this.stream.peek()
 	switch tok.tokenType {
@@ -648,6 +693,8 @@ func (this *parser) parseStatement() Node {
 		fallthrough
 	case FOR:
 		return this.parseIterationStatement()
+	case SWITCH:
+		return this.parseSwitchStatement()
 	case SEMICOLON:
 		return &EmptyStatement{tok: this.expect(SEMICOLON)}
 	}

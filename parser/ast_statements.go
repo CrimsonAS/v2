@@ -83,6 +83,27 @@ func (this *EmptyStatement) token() token {
 	return this.tok
 }
 
+type CaseStatement struct {
+	tok       token
+	X         Node
+	Body      []Node
+	IsDefault bool
+}
+
+func (this *CaseStatement) token() token {
+	return this.tok
+}
+
+type SwitchStatement struct {
+	tok   token
+	X     Node
+	Cases []*CaseStatement
+}
+
+func (this *SwitchStatement) token() token {
+	return this.tok
+}
+
 type VariableStatement struct {
 	Vars         []*IdentifierLiteral
 	Initializers []Node

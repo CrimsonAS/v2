@@ -220,7 +220,8 @@ func TestObjectLiterals(t *testing.T) {
 						Type: Get,
 						Key:  &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a", col: 13, pos: 13}},
 						X: &BlockStatement{
-							tok: token{tokenType: LBRACE, col: 17, pos: 17},
+							tok:  token{tokenType: LBRACE, col: 17, pos: 17},
+							Body: []Node{},
 						},
 					},
 				},

@@ -114,7 +114,8 @@ func TestReturnStatement(t *testing.T) {
 func TestBlockStatement(t *testing.T) {
 	ep1 := &Program{body: []Node{
 		&BlockStatement{
-			tok: token{tokenType: LBRACE},
+			tok:  token{tokenType: LBRACE},
+			Body: []Node{},
 		},
 	},
 	}
@@ -337,4 +338,84 @@ func TestForStatement(t *testing.T) {
 	},
 	}
 	assert.Equal(t, Parse("for (var a = 1;;) { x }", false), ep3)
+}
+
+func TestSwitchStatement(t *testing.T) {
+	ep1 := &Program{body: []Node{
+		&SwitchStatement{
+			tok: token{tokenType: SWITCH, value: "switch"},
+			X: &IdentifierLiteral{
+				Node: nil,
+				tok:  token{tokenType: IDENTIFIER, value: "a", pos: 8, col: 8},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse("switch (a) {}", false), ep1)
+
+	ep2 := &Program{body: []Node{
+		&SwitchStatement{
+			tok: token{tokenType: SWITCH, value: "switch"},
+			X: &IdentifierLiteral{
+				Node: nil,
+				tok:  token{tokenType: IDENTIFIER, value: "a", pos: 8, col: 8},
+			},
+			Cases: []*CaseStatement{
+				&CaseStatement{
+					X:    &NumericLiteral{tok: token{tokenType: NUMERIC_LITERAL, value: "1", pos: 18, col: 18}},
+					Body: []Node{},
+				},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse("switch (a) { case 1:}", false), ep2)
+
+	ep3 := &Program{body: []Node{
+		&SwitchStatement{
+			tok: token{tokenType: SWITCH, value: "switch"},
+			X: &IdentifierLiteral{
+				Node: nil,
+				tok:  token{tokenType: IDENTIFIER, value: "a", pos: 8, col: 8},
+			},
+			Cases: []*CaseStatement{
+				&CaseStatement{
+					X:    &NumericLiteral{tok: token{tokenType: NUMERIC_LITERAL, value: "1", pos: 18, col: 18}},
+					Body: []Node{},
+				},
+				&CaseStatement{
+					X: &NumericLiteral{tok: token{tokenType: NUMERIC_LITERAL, value: "2", pos: 25, col: 25}},
+					Body: []Node{
+						&ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a", pos: 28, col: 28}}},
+					},
+				},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse("switch (a) { case 1:case 2: a;}", false), ep3)
+
+	ep4 := &Program{body: []Node{
+		&SwitchStatement{
+			tok: token{tokenType: SWITCH, value: "switch"},
+			X: &IdentifierLiteral{
+				Node: nil,
+				tok:  token{tokenType: IDENTIFIER, value: "a", pos: 8, col: 8},
+			},
+			Cases: []*CaseStatement{
+				&CaseStatement{
+					X:    &NumericLiteral{tok: token{tokenType: NUMERIC_LITERAL, value: "1", pos: 18, col: 18}},
+					Body: []Node{},
+				},
+				&CaseStatement{
+					IsDefault: true,
+					Body: []Node{
+						&ExpressionStatement{X: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a", pos: 29, col: 29}}},
+					},
+				},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse("switch (a) { case 1:default: a;}", false), ep4)
 }

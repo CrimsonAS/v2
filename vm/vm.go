@@ -188,7 +188,7 @@ func (this *vm) Run() value {
 	for ; len(this.stack) > 0 && this.ip < len(this.code); this.ip++ {
 		op := this.code[this.ip]
 		if execDebug {
-			log.Printf("Op %d: %s", this.ip, op)
+			log.Printf("Op %d: %s (stack: %+v)", this.ip, op, this.data_stack)
 		}
 		switch op.otype {
 		case PUSH_BOOL:
@@ -205,7 +205,7 @@ func (this *vm) Run() value {
 			val := this.data_stack.pop()
 			key := this.data_stack.pop()
 			obj := this.data_stack.peek().(valueObject)
-			pd := &propertyDescriptor{name: key.String(), value: val}
+			pd := &propertyDescriptor{name: key.String(), value: val, hasValue: true, writable: true, hasWritable: true, configurable: true, hasConfigurable: true}
 			obj.defineOwnProperty(this, pd.name, pd, false)
 		case END_OBJECT:
 			this.data_stack.pop()
@@ -329,6 +329,20 @@ func (this *vm) Run() value {
 			ok := this.setVar(op.odata.asInt(), v)
 			if !ok {
 				panic("var not found")
+			}
+		case STORE_MEMBER:
+			v := this.data_stack.pop()
+			nv := this.data_stack.pop()
+			var vo valueObject
+			if v.hasPrimitiveBase() {
+				// Would be nice if we could do this at codegen time...
+				vo = v.ToObject()
+			} else {
+				vo = v.(valueObject)
+			}
+			vo.put(this, stringtable[op.odata.asInt()], nv, true)
+			if execDebug {
+				log.Printf("STORE_MEMBER %s.%s = %+v", vo, stringtable[op.odata.asInt()], nv)
 			}
 		case LOAD_MEMBER:
 			v := this.data_stack.pop()

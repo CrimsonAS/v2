@@ -71,6 +71,7 @@ const (
 
 	// Loads a member from the topmost stack item, and pushes it to the stack frame.
 	LOAD_MEMBER
+	STORE_MEMBER
 
 	// Jump ip, relative to the current position.
 	JMP
@@ -218,6 +219,8 @@ func (this opcode) String() string {
 		return fmt.Sprintf("LOAD %s", stringtable[int(this.odata)])
 	case LOAD_MEMBER:
 		return fmt.Sprintf("LOAD_MEMBER %s", stringtable[int(this.odata)])
+	case STORE_MEMBER:
+		return fmt.Sprintf("STORE_MEMBER %s", stringtable[int(this.odata)])
 	default:
 		return fmt.Sprintf("unknown opcode %d", this.otype)
 	}
@@ -546,10 +549,17 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 			codebuf = append(codebuf, this.generateCode(n.Left)...)
 			codebuf = append(codebuf, simpleOp(LESS_THAN_EQ))
 		case parser.ASSIGNMENT:
-			lhs := n.Left.(*parser.IdentifierLiteral)
-			codebuf = append(codebuf, this.generateCode(n.Right)...)
-			varIdx := float64(appendStringtable(lhs.String()))
-			codebuf = append(codebuf, newOpcode(STORE, varIdx))
+			switch lhs := n.Left.(type) {
+			case *parser.IdentifierLiteral:
+				codebuf = append(codebuf, this.generateCode(n.Right)...)
+				varIdx := float64(appendStringtable(lhs.String()))
+				codebuf = append(codebuf, newOpcode(STORE, varIdx))
+			case *parser.DotMemberExpression:
+				codebuf = append(codebuf, this.generateCode(n.Right)...)
+				codebuf = append(codebuf, this.generateCode(lhs.X)...)
+				varIdx := appendStringtable(lhs.Name.String())
+				codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(varIdx)))
+			}
 		default:
 			panic(fmt.Sprintf("unknown operator %s", n.Operator()))
 		}

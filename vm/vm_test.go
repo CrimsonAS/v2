@@ -440,3 +440,22 @@ func TestConditionalExpression(t *testing.T) {
 
 	runSimpleVMTestHelper(t, tests)
 }
+
+func TestObjectProperties(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = {}; a.b;",
+			out: newUndefined(),
+		},
+		simpleVMTest{
+			in:  "var a = {b: 5}; a.b;",
+			out: newNumber(5),
+		},
+		simpleVMTest{
+			in:  "var a = {b: 5}; a.b = 6; a.b;",
+			out: newNumber(6),
+		},
+	}
+
+	runSimpleVMTestHelper(t, tests)
+}

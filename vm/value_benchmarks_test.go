@@ -172,3 +172,30 @@ func BenchmarkObjectFromSimpleType(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkObjects(b *testing.B) {
+	b.Run("creation", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New(`var s = {};`)
+			v.Run()
+		}
+	})
+	b.Run("undefined_read", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New(`var s = {}; s.b`)
+			v.Run()
+		}
+	})
+	b.Run("int_read", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New(`var s = {b: 5}; s.b`)
+			v.Run()
+		}
+	})
+	b.Run("int_write", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New(`var s = {b: 5}; s.b = 6`)
+			v.Run()
+		}
+	})
+}

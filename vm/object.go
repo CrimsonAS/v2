@@ -43,12 +43,12 @@ const (
 )
 
 func (this valueObject) defineDefaultProperty(vm *vm, prop string, v value, lt int) bool {
-	pd := &propertyDescriptor{name: prop, length: lt, enumerable: true, configurable: false, value: v}
+	pd := &propertyDescriptor{name: prop, length: lt, hasLength: true, enumerable: true, hasEnumerable: true, configurable: false, hasConfigurable: true, value: v, hasValue: true}
 	return this.defineOwnProperty(vm, prop, pd, true)
 }
 
 func (this valueObject) defineReadonlyProperty(vm *vm, prop string, v value, lt int) bool {
-	pd := &propertyDescriptor{name: prop, length: lt, enumerable: true, configurable: false, value: v}
+	pd := &propertyDescriptor{name: prop, length: lt, hasLength: true, enumerable: true, hasEnumerable: true, configurable: false, hasConfigurable: true, value: v, hasValue: true}
 	return this.defineOwnProperty(vm, prop, pd, true)
 }
 
@@ -110,9 +110,9 @@ func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDes
 
 		var pd *propertyDescriptor
 		if desc.isGenericDescriptor() || desc.isDataDescriptor() {
-			pd = &propertyDescriptor{name: prop, value: desc.value, writable: desc.writable, enumerable: desc.enumerable, configurable: desc.configurable}
+			pd = &propertyDescriptor{name: prop, value: desc.value, hasValue: true, writable: desc.writable, hasWritable: true, enumerable: desc.enumerable, hasEnumerable: true, configurable: desc.configurable, hasConfigurable: true}
 		} else {
-			pd = &propertyDescriptor{name: prop, get: desc.get, set: desc.set, enumerable: desc.enumerable, configurable: desc.configurable}
+			pd = &propertyDescriptor{name: prop, get: desc.get, hasGet: true, set: desc.set, hasSet: true, enumerable: desc.enumerable, hasEnumerable: true, configurable: desc.configurable, hasConfigurable: true}
 		}
 		this.odata.properties = append(this.odata.properties, pd)
 		//log.Printf("Added new property %s %+v", prop, pd)
@@ -194,15 +194,30 @@ func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDes
 		}
 	}
 
-	current.name = desc.name
-	current.get = desc.get
-	current.set = desc.set
-	current.value = desc.value
-	current.length = desc.length
-	current.propIdx = desc.propIdx
-	current.writable = desc.writable
-	current.enumerable = desc.enumerable
-	current.configurable = desc.configurable
+	if desc.name != "" {
+		current.name = desc.name
+	}
+	if desc.hasGet {
+		current.get = desc.get
+	}
+	if desc.hasSet {
+		current.set = desc.set
+	}
+	if desc.hasValue {
+		current.value = desc.value
+	}
+	if desc.hasLength {
+		current.length = desc.length
+	}
+	if desc.hasWritable {
+		current.writable = desc.writable
+	}
+	if desc.hasEnumerable {
+		current.enumerable = desc.enumerable
+	}
+	if desc.hasConfigurable {
+		current.configurable = desc.configurable
+	}
 	//log.Printf("Defined property %s on %s", prop, this)
 	return true
 }
@@ -220,7 +235,7 @@ func (this valueObject) put(vm *vm, prop string, v value, throw bool) {
 
 	ownDesc := this.getOwnProperty(vm, prop)
 	if ownDesc.isDataDescriptor() {
-		valueDesc := &propertyDescriptor{value: v}
+		valueDesc := &propertyDescriptor{value: v, hasValue: true}
 		this.defineOwnProperty(vm, prop, valueDesc, throw)
 		return
 	}
@@ -229,7 +244,7 @@ func (this valueObject) put(vm *vm, prop string, v value, throw bool) {
 	if desc.isAccessorDescriptor() {
 		desc.set(vm, this, prop, desc, v)
 	} else {
-		newDesc := &propertyDescriptor{value: v, writable: true, enumerable: true, configurable: true}
+		newDesc := &propertyDescriptor{value: v, hasValue: true, writable: true, hasWritable: true, enumerable: true, hasEnumerable: true, configurable: true, hasConfigurable: true}
 		this.defineOwnProperty(vm, prop, newDesc, throw)
 	}
 }
@@ -289,10 +304,18 @@ type propertyDescriptor struct {
 	set          setFn // [[Set]]
 	value        value // [[Value]] convenience
 	length       int
-	propIdx      int
 	writable     bool // [[Writable]]
 	enumerable   bool // [[Enumerable]]
 	configurable bool // [[Configurable]]
+
+	// For letting changes to descriptors know what is set.
+	hasGet          bool
+	hasSet          bool
+	hasValue        bool
+	hasLength       bool
+	hasWritable     bool
+	hasEnumerable   bool
+	hasConfigurable bool
 }
 
 func (this *propertyDescriptor) isDataDescriptor() bool {

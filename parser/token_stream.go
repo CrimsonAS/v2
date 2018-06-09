@@ -48,6 +48,20 @@ const (
 	NUMERIC_LITERAL
 	IDENTIFIER
 
+	// Assignment operators
+	ASSIGNMENT              // =
+	PLUS_EQ                 // +=
+	MINUS_EQ                // -=
+	MULTIPLY_EQ             // *=
+	DIVIDE_EQ               // /=
+	MODULUS_EQ              // %=
+	LEFT_SHIFT_EQ           // <<=
+	RIGHT_SHIFT_EQ          // >>=
+	UNSIGNED_RIGHT_SHIFT_EQ // >>>=
+	AND_EQ                  // &=
+	XOR_EQ                  // ^=
+	OR_EQ                   // |=
+
 	PLUS                 // +
 	INCREMENT            // ++
 	MINUS                // -
@@ -55,7 +69,6 @@ const (
 	MULTIPLY             // *
 	DIVIDE               // /
 	MODULUS              // %
-	ASSIGNMENT           // =
 	EQUALS               // ==
 	STRICT_EQUALS        // ===
 	BITWISE_AND          // &
@@ -378,28 +391,64 @@ func (this *tokenStream) consumeOperator(firstDigit byte) *token {
 		panic("unknown operator")
 	}
 
+	if c.tokenType == MODULUS {
+		if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = MODULUS_EQ
+		}
+	}
+	if c.tokenType == MULTIPLY {
+		if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = MULTIPLY_EQ
+		}
+	}
+	if c.tokenType == DIVIDE {
+		if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = DIVIDE_EQ
+		}
+	}
 	if c.tokenType == PLUS {
 		if !this.stream.eof() && this.stream.peek() == '+' {
 			this.stream.next()
 			c.tokenType = INCREMENT
+		} else if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = PLUS_EQ
 		}
 	}
 	if c.tokenType == MINUS {
 		if !this.stream.eof() && this.stream.peek() == '-' {
 			this.stream.next()
 			c.tokenType = DECREMENT
+		} else if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = MINUS_EQ
 		}
 	}
 	if c.tokenType == BITWISE_AND {
 		if !this.stream.eof() && this.stream.peek() == '&' {
 			this.stream.next()
 			c.tokenType = LOGICAL_AND
+		} else if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = AND_EQ
 		}
 	}
 	if c.tokenType == BITWISE_OR {
 		if !this.stream.eof() && this.stream.peek() == '|' {
 			this.stream.next()
 			c.tokenType = LOGICAL_OR
+		} else if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = OR_EQ
+		}
+	}
+	if c.tokenType == BITWISE_XOR {
+		if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = XOR_EQ
 		}
 	}
 	if c.tokenType == ASSIGNMENT {
@@ -445,6 +494,27 @@ func (this *tokenStream) consumeOperator(firstDigit byte) *token {
 			}
 		}
 
+	}
+
+	if c.tokenType == LEFT_SHIFT {
+		if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = LEFT_SHIFT_EQ
+		}
+	}
+
+	if c.tokenType == RIGHT_SHIFT {
+		if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = RIGHT_SHIFT_EQ
+		}
+	}
+
+	if c.tokenType == UNSIGNED_RIGHT_SHIFT {
+		if !this.stream.eof() && this.stream.peek() == '=' {
+			this.stream.next()
+			c.tokenType = UNSIGNED_RIGHT_SHIFT_EQ
+		}
 	}
 
 	return c
@@ -517,7 +587,9 @@ const tokenDebug = false
 
 func (this *tokenStream) readNext() {
 	if tokenDebug {
-		defer func() { log.Printf("Read next token: %+v", this.current) }()
+		defer func() {
+			log.Printf("Read next token: %s %s %+v", this.current.tokenType, this.current.value, this.current)
+		}()
 	}
 	this.consumeWhitespace()
 

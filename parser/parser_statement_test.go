@@ -316,16 +316,16 @@ func TestForStatement(t *testing.T) {
 				Vars: []*IdentifierLiteral{
 					&IdentifierLiteral{
 						Node: nil,
-						tok:  token{tokenType: 4, value: "a", pos: 9, line: 0, col: 9},
+						tok:  token{tokenType: IDENTIFIER, value: "a", pos: 9, line: 0, col: 9},
 					},
 				},
 				Initializers: []Node{
 					&NumericLiteral{
 						Node: nil,
-						tok:  token{tokenType: 3, value: "1", pos: 13, line: 0, col: 13},
+						tok:  token{tokenType: NUMERIC_LITERAL, value: "1", pos: 13, line: 0, col: 13},
 					},
 				},
-				tok: token{tokenType: 52, value: "var", pos: 5, line: 0, col: 5},
+				tok: token{tokenType: VAR, value: "var", pos: 5, line: 0, col: 5},
 			},
 			Body: &BlockStatement{
 				tok: token{tokenType: LBRACE, pos: 18, col: 18},

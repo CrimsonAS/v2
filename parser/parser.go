@@ -421,6 +421,26 @@ func (this *parser) parseAssignmentExpression() Node {
 	tok := this.stream.peek()
 
 	switch tok.tokenType {
+	case PLUS_EQ:
+		fallthrough
+	case MINUS_EQ:
+		fallthrough
+	case DIVIDE_EQ:
+		fallthrough
+	case MODULUS_EQ:
+		fallthrough
+	case LEFT_SHIFT_EQ:
+		fallthrough
+	case RIGHT_SHIFT_EQ:
+		fallthrough
+	case UNSIGNED_RIGHT_SHIFT_EQ:
+		fallthrough
+	case AND_EQ:
+		fallthrough
+	case XOR_EQ:
+		fallthrough
+	case OR_EQ:
+		panic("unhandled assignment operator")
 	case ASSIGNMENT:
 		this.expect(tok.tokenType)
 		right := this.parseConditionalExpression()
@@ -468,7 +488,7 @@ func (this *parser) parsePrimaryExpression() Node {
 	case EOF:
 		return nil
 	default:
-		panic(fmt.Sprintf("unknown expression type %s", tok.tokenType))
+		panic(fmt.Sprintf("unknown expression type %s %s", tok.tokenType, tok.value))
 	}
 }
 

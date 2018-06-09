@@ -244,10 +244,74 @@ func TestOperators(t *testing.T) {
 			},
 		},
 		tokenStreamTest{
+			input: "^=",
+			output: []token{
+				token{
+					tokenType: XOR_EQ,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "|=",
+			output: []token{
+				token{
+					tokenType: OR_EQ,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "&=",
+			output: []token{
+				token{
+					tokenType: AND_EQ,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: ">>=",
+			output: []token{
+				token{
+					tokenType: RIGHT_SHIFT_EQ,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: ">>>=",
+			output: []token{
+				token{
+					tokenType: UNSIGNED_RIGHT_SHIFT_EQ,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "<<=",
+			output: []token{
+				token{
+					tokenType: LEFT_SHIFT_EQ,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "+=",
+			output: []token{
+				token{
+					tokenType: PLUS_EQ,
+				},
+			},
+		},
+		tokenStreamTest{
 			input: "-",
 			output: []token{
 				token{
 					tokenType: MINUS,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "-=",
+			output: []token{
+				token{
+					tokenType: MINUS_EQ,
 				},
 			},
 		},
@@ -260,6 +324,14 @@ func TestOperators(t *testing.T) {
 			},
 		},
 		tokenStreamTest{
+			input: "*=",
+			output: []token{
+				token{
+					tokenType: MULTIPLY_EQ,
+				},
+			},
+		},
+		tokenStreamTest{
 			input: "/",
 			output: []token{
 				token{
@@ -268,10 +340,26 @@ func TestOperators(t *testing.T) {
 			},
 		},
 		tokenStreamTest{
+			input: "/=",
+			output: []token{
+				token{
+					tokenType: DIVIDE_EQ,
+				},
+			},
+		},
+		tokenStreamTest{
 			input: "%",
 			output: []token{
 				token{
 					tokenType: MODULUS,
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "%=",
+			output: []token{
+				token{
+					tokenType: MODULUS_EQ,
 				},
 			},
 		},

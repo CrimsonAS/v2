@@ -164,3 +164,23 @@ type ObjectLiteral struct {
 func (this *ObjectLiteral) token() token {
 	return this.tok
 }
+
+type RegExpFlag int
+
+const (
+	NoFlagsRegExp RegExpFlag = iota
+	GlobalRegExp
+	IgnoreCaseRegExp
+	MultilineRegExp
+)
+
+type RegExpLiteral struct {
+	Node
+	tok    token
+	RegExp string
+	Flags  RegExpFlag
+}
+
+func (this *RegExpLiteral) token() token {
+	return this.tok
+}

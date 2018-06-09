@@ -546,3 +546,19 @@ func TestSequenceExpression(t *testing.T) {
 		}}}
 	assert.Equal(t, Parse("a,b,c", false), ep1)
 }
+
+func TestRegExpLiterals(t *testing.T) {
+	ep1 := &Program{body: []Node{
+		&VariableStatement{
+			tok: token{tokenType: VAR, value: "var"},
+			Vars: []*IdentifierLiteral{
+				&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a", pos: 4, col: 4}},
+			},
+			Initializers: []Node{
+				&RegExpLiteral{tok: token{tokenType: DIVIDE, pos: 8, col: 8}, RegExp: "test", Flags: IgnoreCaseRegExp | GlobalRegExp},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse("var a = /test/ig", false), ep1)
+}

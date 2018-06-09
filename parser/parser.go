@@ -498,11 +498,22 @@ func (this *parser) parsePrimaryExpression() Node {
 		expr := this.parseExpression()
 		this.expect(RPAREN)
 		return expr
+	case DIVIDE:
+		return this.parseRegExpLiteral(false)
+	case DIVIDE_EQ:
+		return this.parseRegExpLiteral(true)
 	case EOF:
 		return nil
 	default:
 		panic(fmt.Sprintf("unknown expression type %s %s", tok.tokenType, tok.value))
 	}
+}
+
+func (this *parser) parseRegExpLiteral(eq bool) Node {
+	tok := this.stream.peek()
+	re, flags := this.stream.scanRegExp(eq)
+	this.expect(tok.tokenType) // we ate it
+	return &RegExpLiteral{tok: tok, RegExp: re, Flags: flags}
 }
 
 func (this *parser) parseIfStatement() *IfStatement {

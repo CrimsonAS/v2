@@ -27,6 +27,7 @@
 package parser
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -688,4 +689,110 @@ func (this *tokenStream) createToken(tokenType TokenType, value string) *token {
 		tokenType: tokenType,
 		value:     value,
 	}
+}
+
+func regExpFlagFromChar(ch byte) RegExpFlag {
+	switch ch {
+	case 'g':
+		return GlobalRegExp
+	case 'i':
+		return IgnoreCaseRegExp
+	case 'm':
+		return MultilineRegExp
+	}
+	return NoFlagsRegExp
+}
+
+// read a regular expression. this can't be done as a regular token, because it
+// isn't following the token rules.. var a = /regex/ would be parsed as VAR EQ
+// DIV IDENTIFIER DIV, but that's obviously unhelpful. so we rely on the parser
+// to "pull" a regular expression out of us at the right time.
+//
+// pre-requisites: the '/' starting the regex *must* have already been consumed
+// (i.e. by the parser)!
+func (this *tokenStream) scanRegExp(eq bool) (tokenText string, patternFlags RegExpFlag) {
+	if eq {
+		tokenText = "="
+	}
+
+	for { // this will terminate when we find the following /
+		currChar := this.stream.peek()
+		switch currChar {
+		case '\\':
+			tokenText += string(currChar)
+			currChar = this.stream.next()
+
+			if this.stream.eof() || this.stream.peek() == '\n' {
+				panic("Unterminated regular expression")
+			}
+
+			tokenText += string(currChar)
+			currChar = this.stream.next()
+			break
+
+		case '[':
+			tokenText += string(currChar)
+			currChar = this.stream.next()
+
+			for !this.stream.eof() && this.stream.peek() != '\n' {
+				if currChar == ']' {
+					break
+				} else if currChar == '\\' {
+					tokenText += string(currChar)
+					currChar = this.stream.next()
+
+					if this.stream.eof() || this.stream.peek() == '\n' {
+						panic("Unterminated regular expression")
+					}
+
+					tokenText += string(currChar)
+					currChar = this.stream.next()
+				} else {
+					tokenText += string(currChar)
+					currChar = this.stream.next()
+				}
+			}
+
+			if currChar != ']' {
+				panic("Unterminated regular expression class")
+			}
+
+			tokenText += string(currChar)
+			currChar = this.stream.next()
+			break
+
+		case '/': // terminating the regexp...
+			patternFlags = NoFlagsRegExp
+			currChar = this.stream.next() // skip /
+
+			if !this.stream.eof() {
+				currChar = this.stream.next()
+
+				for isIdentifier(currChar, false) {
+					flag := regExpFlagFromChar(currChar)
+					if flag == NoFlagsRegExp || patternFlags&flag != 0 {
+						panic(fmt.Sprintf("Bad regular expression flag %c", currChar))
+					}
+					patternFlags |= flag
+					if this.stream.eof() {
+						break
+					} else {
+						currChar = this.stream.next()
+					}
+				}
+			}
+
+			return tokenText, patternFlags
+
+		default:
+			if this.stream.eof() || this.stream.peek() == '\n' {
+				panic("Unterminated regular expression")
+			} else {
+				tokenText += string(currChar)
+				currChar = this.stream.next()
+			}
+		} // switch
+	} // for
+
+	panic("unreachable")
 }

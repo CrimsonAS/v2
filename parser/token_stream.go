@@ -789,15 +789,16 @@ func (this *tokenStream) scanRegExp(eq bool) (tokenText string, patternFlags Reg
 		currChar := this.stream.peek()
 		switch currChar {
 		case '\\':
-			tokenText += string(currChar)
 			currChar = this.stream.next()
+			tokenText += string(currChar)
 
 			if this.stream.eof() || this.stream.peek() == '\n' {
 				panic("Unterminated regular expression")
 			}
 
+			currChar = this.stream.peek()
 			tokenText += string(currChar)
-			currChar = this.stream.next()
+			this.stream.next()
 			break
 
 		case '[':
@@ -828,7 +829,6 @@ func (this *tokenStream) scanRegExp(eq bool) (tokenText string, patternFlags Reg
 			}
 
 			tokenText += string(currChar)
-			currChar = this.stream.next()
 			break
 
 		case '/': // terminating the regexp...
@@ -836,9 +836,9 @@ func (this *tokenStream) scanRegExp(eq bool) (tokenText string, patternFlags Reg
 			currChar = this.stream.next() // skip /
 
 			if !this.stream.eof() {
-				currChar = this.stream.next()
+				currChar = this.stream.peek()
 
-				for isIdentifier(currChar, false) {
+				for regExpFlagFromChar(currChar) != NoFlagsRegExp {
 					flag := regExpFlagFromChar(currChar)
 					if flag == NoFlagsRegExp || patternFlags&flag != 0 {
 						panic(fmt.Sprintf("Bad regular expression flag %c", currChar))
@@ -846,9 +846,9 @@ func (this *tokenStream) scanRegExp(eq bool) (tokenText string, patternFlags Reg
 					patternFlags |= flag
 					if this.stream.eof() {
 						break
-					} else {
-						currChar = this.stream.next()
 					}
+					currChar = this.stream.next() // consumed this one
+					currChar = this.stream.peek() // look at this one
 				}
 			}
 
@@ -859,7 +859,7 @@ func (this *tokenStream) scanRegExp(eq bool) (tokenText string, patternFlags Reg
 				panic("Unterminated regular expression")
 			} else {
 				tokenText += string(currChar)
-				currChar = this.stream.next()
+				this.stream.next()
 			}
 		} // switch
 	} // for

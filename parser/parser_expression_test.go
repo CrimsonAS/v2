@@ -561,4 +561,19 @@ func TestRegExpLiterals(t *testing.T) {
 	},
 	}
 	assert.Equal(t, Parse("var a = /test/ig", false), ep1)
+
+	ep2 := &Program{body: []Node{
+		&VariableStatement{
+			tok: token{tokenType: VAR, value: "var"},
+			Vars: []*IdentifierLiteral{
+				&IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "re19", pos: 4, col: 4}},
+			},
+			Initializers: []Node{
+				&RegExpLiteral{tok: token{tokenType: DIVIDE, pos: 11, col: 11}, RegExp: `(?:^|\s+)ba(?:\s+|$)`, Flags: NoFlagsRegExp},
+			},
+		},
+	},
+	}
+	assert.Equal(t, Parse(`var re19 = /(?:^|\s+)ba(?:\s+|$)/;`, false), ep2)
+
 }

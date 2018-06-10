@@ -74,6 +74,8 @@ const (
 	// Loads a member from the topmost stack item, and pushes it to the stack frame.
 	LOAD_MEMBER
 	STORE_MEMBER
+	LOAD_INDEXED
+	STORE_INDEXED
 
 	// Jump ip, relative to the current position.
 	JMP
@@ -245,6 +247,10 @@ func (this opcode) String() string {
 		return fmt.Sprintf("LOAD_MEMBER %s", stringtable[int(this.odata)])
 	case STORE_MEMBER:
 		return fmt.Sprintf("STORE_MEMBER %s", stringtable[int(this.odata)])
+	case LOAD_INDEXED:
+		return fmt.Sprintf("LOAD_INDEXED")
+	case STORE_INDEXED:
+		return fmt.Sprintf("STORE_INDEXED")
 	default:
 		return fmt.Sprintf("unknown opcode %d", this.otype)
 	}
@@ -499,50 +505,94 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 
 			// See the comment for postfix INCREMENT/DECREMENT.
 			case parser.INCREMENT:
-				lhs := n.X.(*parser.IdentifierLiteral)
-				varIdx := float64(appendStringtable(lhs.String()))
-				codebuf = append(codebuf, this.generateCode(n.X)...)
-				codebuf = append(codebuf, simpleOp(INCREMENT))
-				if this.canConsume > 0 {
-					codebuf = append(codebuf, simpleOp(DUP))
+				varIdx := float64(0.0)
+				switch lhs := n.X.(type) {
+				case *parser.IdentifierLiteral:
+					varIdx = float64(appendStringtable(lhs.String()))
+					codebuf = append(codebuf, this.generateCode(n.X)...)
+					codebuf = append(codebuf, simpleOp(INCREMENT))
+					if this.canConsume > 0 {
+						codebuf = append(codebuf, simpleOp(DUP))
+					}
+					codebuf = append(codebuf, newOpcode(STORE, varIdx))
+				case *parser.DotMemberExpression:
+					varIdx = float64(appendStringtable(lhs.Name.String()))
+					codebuf = append(codebuf, simpleOp(DUP)) // so we can store back to it
+					codebuf = append(codebuf, this.generateCode(lhs.X)...)
+					codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(varIdx)))
+					codebuf = append(codebuf, simpleOp(INCREMENT))
+					if this.canConsume > 0 {
+						codebuf = append(codebuf, simpleOp(DUP))
+					}
+					codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(varIdx)))
 				}
-				codebuf = append(codebuf, newOpcode(STORE, varIdx))
 			case parser.DECREMENT:
-				lhs := n.X.(*parser.IdentifierLiteral)
-				varIdx := float64(appendStringtable(lhs.String()))
-				codebuf = append(codebuf, this.generateCode(n.X)...)
-				codebuf = append(codebuf, simpleOp(DECREMENT))
-				if this.canConsume > 0 {
-					codebuf = append(codebuf, simpleOp(DUP))
+				varIdx := float64(0.0)
+				switch lhs := n.X.(type) {
+				case *parser.IdentifierLiteral:
+					varIdx = float64(appendStringtable(lhs.String()))
+					codebuf = append(codebuf, this.generateCode(n.X)...)
+					codebuf = append(codebuf, simpleOp(DECREMENT))
+					if this.canConsume > 0 {
+						codebuf = append(codebuf, simpleOp(DUP))
+					}
+					codebuf = append(codebuf, newOpcode(STORE, varIdx))
+				case *parser.DotMemberExpression:
+					varIdx = float64(appendStringtable(lhs.Name.String()))
+					codebuf = append(codebuf, this.generateCode(lhs.X)...)
+					codebuf = append(codebuf, simpleOp(DUP)) // so we can store back to it
+					codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(varIdx)))
+					codebuf = append(codebuf, simpleOp(DECREMENT))
+					if this.canConsume > 0 {
+						codebuf = append(codebuf, simpleOp(DUP))
+					}
+					codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(varIdx)))
 				}
-				codebuf = append(codebuf, newOpcode(STORE, varIdx))
 			default:
 				panic(fmt.Sprintf("unknown prefix unary operator %s", n.Operator()))
 			}
 		} else {
-			lhs := n.X.(*parser.IdentifierLiteral)
-			varIdx := float64(appendStringtable(lhs.String()))
+			switch lhs := n.X.(type) {
+			case *parser.IdentifierLiteral:
+				varIdx := float64(appendStringtable(lhs.String()))
 
-			// These are pretty ugly.
-			// The DUP is needed so that subsequent assignment operations can
-			// pop the original value, but that's pretty disgusting.
-			switch n.Operator() {
-			case parser.INCREMENT:
-				codebuf = append(codebuf, this.generateCode(n.X)...)
-				if this.canConsume > 0 {
-					codebuf = append(codebuf, simpleOp(DUP))
+				switch n.Operator() {
+				case parser.INCREMENT:
+					codebuf = append(codebuf, this.generateCode(n.X)...)
+					if this.canConsume > 0 {
+						codebuf = append(codebuf, simpleOp(DUP))
+					}
+					codebuf = append(codebuf, simpleOp(INCREMENT))
+					codebuf = append(codebuf, newOpcode(STORE, varIdx))
+				case parser.DECREMENT:
+					codebuf = append(codebuf, this.generateCode(n.X)...)
+					if this.canConsume > 0 {
+						codebuf = append(codebuf, simpleOp(DUP))
+					}
+					codebuf = append(codebuf, simpleOp(DECREMENT))
+					codebuf = append(codebuf, newOpcode(STORE, varIdx))
+				default:
+					panic(fmt.Sprintf("unknown postfix unary operator %s", n.Operator()))
 				}
-				codebuf = append(codebuf, simpleOp(INCREMENT))
-				codebuf = append(codebuf, newOpcode(STORE, varIdx))
-			case parser.DECREMENT:
-				codebuf = append(codebuf, this.generateCode(n.X)...)
-				if this.canConsume > 0 {
-					codebuf = append(codebuf, simpleOp(DUP))
+			case *parser.DotMemberExpression:
+				switch n.Operator() {
+				case parser.INCREMENT:
+					codebuf = append(codebuf, this.generateCode(n.X)...)
+					if this.canConsume > 0 {
+						codebuf = append(codebuf, simpleOp(DUP))
+					}
+					codebuf = append(codebuf, simpleOp(INCREMENT))
+					varIdx := float64(appendStringtable(lhs.Name.String()))
+					codebuf = append(codebuf, newOpcode(STORE_MEMBER, varIdx))
+				case parser.DECREMENT:
+					codebuf = append(codebuf, this.generateCode(n.X)...)
+					if this.canConsume > 0 {
+						codebuf = append(codebuf, simpleOp(DUP))
+					}
+					codebuf = append(codebuf, simpleOp(DECREMENT))
+					varIdx := float64(appendStringtable(lhs.Name.String()))
+					codebuf = append(codebuf, newOpcode(STORE_MEMBER, varIdx))
 				}
-				codebuf = append(codebuf, simpleOp(DECREMENT))
-				codebuf = append(codebuf, newOpcode(STORE, varIdx))
-			default:
-				panic(fmt.Sprintf("unknown postfix unary operator %s", n.Operator()))
 			}
 		}
 	case *parser.AssignmentExpression:
@@ -592,6 +642,10 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 				codebuf = append(codebuf, this.generateCode(lhs.X)...)
 				varIdx := appendStringtable(lhs.Name.String())
 				codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(varIdx)))
+			case *parser.BracketMemberExpression:
+				codebuf = append(codebuf, this.generateCode(lhs.X)...)
+				codebuf = append(codebuf, this.generateCode(lhs.Y)...)
+				codebuf = append(codebuf, simpleOp(LOAD_INDEXED))
 			default:
 				panic(fmt.Sprintf("unknown left hand side for assignment %T", n.Left))
 			}
@@ -608,7 +662,9 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 			varIdx := appendStringtable(lhs.Name.String())
 			codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(varIdx)))
 		case *parser.BracketMemberExpression:
-			// ### logged above
+			codebuf = append(codebuf, this.generateCode(lhs.Y)...)
+			codebuf = append(codebuf, this.generateCode(lhs.X)...)
+			codebuf = append(codebuf, simpleOp(STORE_INDEXED))
 		default:
 			panic(fmt.Sprintf("unknown left hand side for assignment %T", n.Left))
 		}
@@ -657,6 +713,10 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 		codebuf = append(codebuf, this.generateCode(n.X)...)
 		varIdx := appendStringtable(n.Name.String())
 		codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(varIdx)))
+	case *parser.BracketMemberExpression:
+		codebuf = append(codebuf, this.generateCode(n.X)...)
+		codebuf = append(codebuf, this.generateCode(n.Y)...)
+		codebuf = append(codebuf, simpleOp(LOAD_INDEXED))
 	default:
 		panic(fmt.Sprintf("unknown expression %T", node))
 	}
@@ -746,6 +806,8 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 	case *parser.BinaryExpression:
 		return this.generateCodeForExpression(n)
 	case *parser.DotMemberExpression:
+		return this.generateCodeForExpression(n)
+	case *parser.BracketMemberExpression:
 		return this.generateCodeForExpression(n)
 
 	default:

@@ -128,9 +128,9 @@ func TestDotMemberExpression(t *testing.T) {
 
 func TestBracketMemberExpression(t *testing.T) {
 	ep1 := &Program{body: []Node{&ExpressionStatement{X: &BracketMemberExpression{
-		tok:   token{tokenType: LBRACKET, value: "", col: 1, pos: 1},
-		left:  &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
-		right: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 2, pos: 2}}}},
+		tok: token{tokenType: LBRACKET, value: "", col: 1, pos: 1},
+		X:   &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "a"}},
+		Y:   &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "b", col: 2, pos: 2}}}},
 	}}
 	assert.Equal(t, Parse("a[b]", false), ep1)
 }

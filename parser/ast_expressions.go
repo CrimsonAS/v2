@@ -66,9 +66,9 @@ func (this *DotMemberExpression) token() token {
 
 type BracketMemberExpression struct {
 	Node
-	tok   token
-	left  Node
-	right Node
+	tok token
+	X   Node
+	Y   Node
 }
 
 func (this *BracketMemberExpression) token() token {

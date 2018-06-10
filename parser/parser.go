@@ -168,7 +168,7 @@ func (this *parser) parseMemberOrCall(left Node) Node {
 			this.expect(LBRACKET)
 			right := this.parseExpression()
 			this.expect(RBRACKET)
-			left = &BracketMemberExpression{tok: tok, left: left, right: right}
+			left = &BracketMemberExpression{tok: tok, X: left, Y: right}
 		} else if tok.tokenType == DOT {
 			this.expect(DOT)
 			member := &IdentifierLiteral{tok: this.expect(IDENTIFIER)}
@@ -855,7 +855,7 @@ func RecursivelyPrint(node Node) string {
 	case *DotMemberExpression:
 		return fmt.Sprintf("%s.%s", RecursivelyPrint(n.X), RecursivelyPrint(n.Name))
 	case *BracketMemberExpression:
-		return fmt.Sprintf("%s[%s]", RecursivelyPrint(n.left), RecursivelyPrint(n.right))
+		return fmt.Sprintf("%s[%s]", RecursivelyPrint(n.X), RecursivelyPrint(n.Y))
 	case *CallExpression:
 		args := ""
 		for _, arg := range n.Arguments {

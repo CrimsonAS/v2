@@ -55,3 +55,33 @@ func TestArrayObject(t *testing.T) {
 	}
 	runSimpleVMTestHelper(t, tests)
 }
+
+func TestArrayObjectReadWrite(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var b = [1, 2, 3, 4, 5]; b[0]",
+			out: newNumber(1),
+		},
+		simpleVMTest{
+			in:  "var b = [1, 2, 3, 4, 5]; b[1]",
+			out: newNumber(2),
+		},
+		simpleVMTest{
+			in:  "var b = [1, 2, 3, 4, 5]; b[2]",
+			out: newNumber(3),
+		},
+		simpleVMTest{
+			in:  "var b = [1, 2, 3, 4, 5]; b[3]",
+			out: newNumber(4),
+		},
+		simpleVMTest{
+			in:  "var b = [1, 2, 3, 4, 5]; b[4]",
+			out: newNumber(5),
+		},
+		simpleVMTest{
+			in:  "var b = [1, 2, 3, 4, 5]; b[4] = 255; b[4]",
+			out: newNumber(255),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}

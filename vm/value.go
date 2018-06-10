@@ -299,6 +299,14 @@ func newArrayData(v []value) valueArrayData {
 	return ad
 }
 
+func (this valueArrayData) Get(idx int) value {
+	return this.values[idx]
+}
+
+func (this valueArrayData) Set(idx int, v value) {
+	this.values[idx] = v
+}
+
 type valueArrayData struct {
 	values []value
 }

@@ -396,6 +396,23 @@ func (this *vm) Run() value {
 				log.Printf("LOAD_MEMBER %s.%s got %+v", vo, stringtable[op.odata.asInt()], memb)
 			}
 			this.data_stack.push(memb)
+		case LOAD_INDEXED:
+			obj := this.lastLoadedVar.ToObject()
+			if obj.odata.objectType != ARRAY_OBJECT {
+				panic("LOAD_INDEXED not an array")
+			}
+			idx := this.data_stack.pop().ToInteger()
+			this.data_stack.push(obj.odata.primitiveData.(valueArrayData).Get(idx))
+		case STORE_INDEXED:
+			obj := this.lastLoadedVar.ToObject()
+			if obj.odata.objectType != ARRAY_OBJECT {
+				panic("STORE_INDEXED not an array")
+			}
+			this.data_stack.pop() // discard the LOAD
+			idx := this.data_stack.pop().ToInteger()
+			nv := this.data_stack.pop()
+			log.Printf("Setting %+v to %+v", idx, nv)
+			obj.odata.primitiveData.(valueArrayData).Set(idx, nv)
 		case LOAD:
 			sv, ok := this.findVar(op.odata.asInt())
 			if !ok {

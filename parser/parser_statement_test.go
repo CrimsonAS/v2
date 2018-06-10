@@ -478,3 +478,51 @@ func TestThrowStatement(t *testing.T) {
 
 	assert.Equal(t, Parse("throw a;", false), ep1)
 }
+
+func TestTryStatement(t *testing.T) {
+	ep1 := &Program{body: []Node{
+		&TryStatement{
+			tok: token{tokenType: TRY, value: "try", pos: 0, col: 0},
+			Body: &BlockStatement{
+				tok: token{tokenType: LBRACE, pos: 4, col: 4},
+				Body: []Node{
+					&ExpressionStatement{
+						X: &IdentifierLiteral{
+							tok: token{tokenType: IDENTIFIER, value: "a", pos: 6, col: 6},
+						},
+					},
+				},
+			},
+			Catch: &CatchStatement{
+				tok:        token{tokenType: CATCH, value: "catch", pos: 10, col: 10},
+				Identifier: &IdentifierLiteral{tok: token{tokenType: IDENTIFIER, value: "e", pos: 17, col: 17}},
+				Body: &BlockStatement{
+					tok: token{tokenType: LBRACE, pos: 20, col: 20},
+					Body: []Node{
+						&ExpressionStatement{
+							X: &IdentifierLiteral{
+								tok: token{tokenType: IDENTIFIER, value: "b", pos: 22, col: 22},
+							},
+						},
+					},
+				},
+			},
+			Finally: &FinallyStatement{
+				tok: token{tokenType: FINALLY, value: "finally", pos: 26, col: 26},
+				Body: &BlockStatement{
+					tok: token{tokenType: LBRACE, pos: 34, col: 34},
+					Body: []Node{
+						&ExpressionStatement{
+							X: &IdentifierLiteral{
+								tok: token{tokenType: IDENTIFIER, value: "c", pos: 36, col: 36},
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	}
+
+	assert.Equal(t, Parse("try { a } catch (e) { b } finally { c }", false), ep1)
+}

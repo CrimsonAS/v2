@@ -154,6 +154,20 @@ func (this *ObjectLiteral) token() token {
 
 type RegExpFlag int
 
+func (this RegExpFlag) String() string {
+	b := ""
+	if this&GlobalRegExp != 0 {
+		b += "g"
+	}
+	if this&IgnoreCaseRegExp != 0 {
+		b += "i"
+	}
+	if this&MultilineRegExp != 0 {
+		b += "m"
+	}
+	return b
+}
+
 const (
 	NoFlagsRegExp RegExpFlag = iota
 	GlobalRegExp

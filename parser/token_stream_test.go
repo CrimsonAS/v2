@@ -1003,6 +1003,33 @@ func TestTokens(t *testing.T) {
 			},
 		},
 		tokenStreamTest{
+			input: "try",
+			output: []token{
+				token{
+					tokenType: TRY,
+					value:     "try",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "catch",
+			output: []token{
+				token{
+					tokenType: CATCH,
+					value:     "catch",
+				},
+			},
+		},
+		tokenStreamTest{
+			input: "finally",
+			output: []token{
+				token{
+					tokenType: FINALLY,
+					value:     "finally",
+				},
+			},
+		},
+		tokenStreamTest{
 			input: "for",
 			output: []token{
 				token{

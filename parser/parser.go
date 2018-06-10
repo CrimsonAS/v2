@@ -710,6 +710,38 @@ func (this *parser) parseThrowStatement() Node {
 	return &ThrowStatement{tok: tok, X: x}
 }
 
+func (this *parser) parseTryStatement() Node {
+	tb := &TryStatement{tok: this.expect(TRY), Body: this.parseBlockStatement()}
+
+	switch this.stream.peek().tokenType {
+	case CATCH:
+		cb := &CatchStatement{tok: this.expect(CATCH)}
+		this.expect(LPAREN)
+		cb.Identifier = &IdentifierLiteral{tok: this.expect(IDENTIFIER)}
+		this.expect(RPAREN)
+		cb.Body = this.parseBlockStatement()
+		tb.Catch = cb
+	case FINALLY:
+		fb := &FinallyStatement{tok: this.expect(FINALLY), Body: this.parseBlockStatement()}
+		tb.Finally = fb
+	default:
+		panic("expected catch or finally")
+	}
+
+	switch this.stream.peek().tokenType {
+	case CATCH:
+		panic("catch expected before finally")
+	case FINALLY:
+		if tb.Finally != nil {
+			panic("only one finally block expected")
+		}
+		fb := &FinallyStatement{tok: this.expect(FINALLY), Body: this.parseBlockStatement()}
+		tb.Finally = fb
+	}
+
+	return tb
+}
+
 func (this *parser) parseStatement() Node {
 	tok := this.stream.peek()
 	switch tok.tokenType {
@@ -727,6 +759,8 @@ func (this *parser) parseStatement() Node {
 		return this.parseIterationStatement()
 	case FOR:
 		return this.parseIterationStatement()
+	case TRY:
+		return this.parseTryStatement()
 	case THROW:
 		return this.parseThrowStatement()
 	case SWITCH:
@@ -830,7 +864,7 @@ func RecursivelyPrint(node Node) string {
 		if len(args) > 0 {
 			args = args[:len(args)-2]
 		}
-		return fmt.Sprintf("CALL %s(%s)", RecursivelyPrint(n.X), args)
+		return fmt.Sprintf("%s(%s)", RecursivelyPrint(n.X), args)
 	case *UnaryExpression:
 		if n.postfix {
 			if n.token().tokenType == INCREMENT {
@@ -876,6 +910,15 @@ func RecursivelyPrint(node Node) string {
 		return ";"
 	case *ConditionalExpression:
 		return fmt.Sprintf("%s ? %s : %s", RecursivelyPrint(n.X), RecursivelyPrint(n.Then), RecursivelyPrint(n.Else))
+	case *SequenceExpression:
+		buf := ""
+		for _, a := range n.Seq {
+			buf += fmt.Sprintf("%s, ", RecursivelyPrint(a))
+		}
+		if len(buf) > 0 {
+			buf = buf[:len(buf)-2]
+		}
+		return buf
 	case *AssignmentExpression:
 		switch n.token().tokenType {
 		case ASSIGNMENT:
@@ -951,6 +994,8 @@ func RecursivelyPrint(node Node) string {
 			return fmt.Sprintf("%s >= %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		case INSTANCEOF:
 			return fmt.Sprintf("%s instanceof %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
+		case IN:
+			return fmt.Sprintf("%s in %s", RecursivelyPrint(n.Left), RecursivelyPrint(n.Right))
 		default:
 			panic(fmt.Sprintf("unknown binary expression %s", node.token().tokenType))
 		}
@@ -988,12 +1033,44 @@ func RecursivelyPrint(node Node) string {
 		return "this"
 	case *NullLiteral:
 		return "null"
+	case *RegExpLiteral:
+		return fmt.Sprintf("/%s/%s", n.RegExp, n.Flags)
 	case *DoWhileStatement:
 		return fmt.Sprintf("do %s while %s", RecursivelyPrint(n.Body), RecursivelyPrint(n.X))
 	case *WhileStatement:
 		return fmt.Sprintf("while %s %s", RecursivelyPrint(n.X), RecursivelyPrint(n.Body))
 	case *ForStatement:
 		return fmt.Sprintf("for (%s; %s; %s) %s", RecursivelyPrint(n.Initializer), RecursivelyPrint(n.Test), RecursivelyPrint(n.Update), RecursivelyPrint(n.Body))
+	case *ForInStatement:
+		return fmt.Sprintf("for %s in %s) %s", RecursivelyPrint(n.X), RecursivelyPrint(n.Y), RecursivelyPrint(n.Body))
+	case *TryStatement:
+		b := fmt.Sprintf("try %s", RecursivelyPrint(n.Body))
+		if n.Catch != nil {
+			b += "\n"
+			b += fmt.Sprintf("catch (%s) %s", n.Catch.Identifier, n.Catch.Body)
+		}
+		if n.Finally != nil {
+			b += "\n"
+			b += fmt.Sprintf("finally %s", n.Finally.Body)
+		}
+		return b
+	case *SwitchStatement:
+		b := fmt.Sprintf("switch (%s) {\n", n.X)
+		for _, cs := range n.Cases {
+			if cs.IsDefault {
+				b += "default:\n"
+			} else {
+				b += fmt.Sprintf("case %s:\n", cs.X)
+			}
+
+			for _, s := range cs.Body {
+				b += fmt.Sprintf("%s\n", RecursivelyPrint(s))
+			}
+		}
+		b += "}\n"
+		return b
+	case *ThrowStatement:
+		return fmt.Sprintf("throw %s\n", n.X)
 	case *VariableStatement:
 		buf := "var "
 		for idx, _ := range n.Vars {

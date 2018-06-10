@@ -168,3 +168,33 @@ type ThrowStatement struct {
 func (this *ThrowStatement) token() token {
 	return this.tok
 }
+
+type TryStatement struct {
+	Body    Node
+	Catch   *CatchStatement
+	Finally *FinallyStatement
+	tok     token
+}
+
+func (this *TryStatement) token() token {
+	return this.tok
+}
+
+type CatchStatement struct {
+	Body       Node
+	Identifier *IdentifierLiteral
+	tok        token
+}
+
+func (this *CatchStatement) token() token {
+	return this.tok
+}
+
+type FinallyStatement struct {
+	Body Node
+	tok  token
+}
+
+func (this *FinallyStatement) token() token {
+	return this.tok
+}

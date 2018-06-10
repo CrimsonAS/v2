@@ -131,6 +131,9 @@ const (
 	CASE
 	DEFAULT
 	THROW
+	TRY
+	CATCH
+	FINALLY
 )
 
 type token struct {
@@ -323,6 +326,12 @@ func classifyIdentifier(id string) (TokenType, bool) {
 		return DEFAULT, false
 	case "throw":
 		return THROW, false
+	case "try":
+		return TRY, false
+	case "catch":
+		return CATCH, false
+	case "finally":
+		return FINALLY, false
 	case "return":
 		return RETURN, false
 	case "this":

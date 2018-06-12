@@ -203,7 +203,7 @@ func (this *vm) Run() value {
 		switch op.otype {
 		case PUSH_BOOL:
 			b := false
-			if op.odata != 0 {
+			if op.opdata != 0 {
 				b = true
 			}
 			this.data_stack.push(newBool(b))
@@ -224,12 +224,12 @@ func (this *vm) Run() value {
 		case PUSH_NULL:
 			this.data_stack.push(newNull())
 		case PUSH_ARRAY:
-			vals := this.data_stack.popSlice(op.odata.asInt())
+			vals := this.data_stack.popSlice(op.opdata.asInt())
 			this.data_stack.push(newArrayObject(vals))
 		case PUSH_NUMBER:
-			this.data_stack.push(newNumber(op.odata.asFloat64()))
+			this.data_stack.push(newNumber(op.opdata.asFloat64()))
 		case PUSH_STRING:
-			this.data_stack.push(newString(stringtable[op.odata.asInt()]))
+			this.data_stack.push(newString(stringtable[op.opdata.asInt()]))
 		case UPLUS:
 			val := this.data_stack.pop()
 			this.data_stack.push(newNumber(val.ToNumber()))
@@ -325,18 +325,18 @@ func (this *vm) Run() value {
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newBool(vals[1].ToNumber() <= vals[0].ToNumber()))
 		case JMP:
-			this.ip += op.odata.asInt()
+			this.ip += op.opdata.asInt()
 		case JNE:
 			test := this.data_stack.pop()
 
-			if op.odata.asInt() == 0 {
+			if op.opdata.asInt() == 0 {
 				panic("JNE 0 is an infinite loop")
 			}
 			if !test.ToBoolean() {
 				if execDebug {
-					log.Printf("IP is at %d jump rel %d code length %d", this.ip, op.odata.asInt(), len(this.code))
+					log.Printf("IP is at %d jump rel %d code length %d", this.ip, op.opdata.asInt(), len(this.code))
 				}
-				this.ip += op.odata.asInt()
+				this.ip += op.opdata.asInt()
 
 				if this.ip >= len(this.code) {
 					panic("JNE blew over opcode length")
@@ -361,10 +361,10 @@ func (this *vm) Run() value {
 		case IN_FUNCTION:
 			// no-op, just for informative/debug purposes
 		case DECLARE:
-			this.defineVar(op.odata.asInt(), nil)
+			this.defineVar(op.opdata.asInt(), nil)
 		case STORE:
 			v := this.data_stack.pop()
-			ok := this.setVar(op.odata.asInt(), v)
+			ok := this.setVar(op.opdata.asInt(), v)
 			if !ok {
 				panic("var not found")
 			}
@@ -378,9 +378,9 @@ func (this *vm) Run() value {
 			} else {
 				vo = v.(valueObject)
 			}
-			vo.put(this, stringtable[op.odata.asInt()], nv, true)
+			vo.put(this, stringtable[op.opdata.asInt()], nv, true)
 			if execDebug {
-				log.Printf("STORE_MEMBER %s.%s = %+v", vo, stringtable[op.odata.asInt()], nv)
+				log.Printf("STORE_MEMBER %s.%s = %+v", vo, stringtable[op.opdata.asInt()], nv)
 			}
 		case LOAD_MEMBER:
 			v := this.data_stack.pop()
@@ -391,9 +391,9 @@ func (this *vm) Run() value {
 			} else {
 				vo = v.(valueObject)
 			}
-			memb := vo.get(this, stringtable[op.odata.asInt()])
+			memb := vo.get(this, stringtable[op.opdata.asInt()])
 			if execDebug {
-				log.Printf("LOAD_MEMBER %s.%s got %+v", vo, stringtable[op.odata.asInt()], memb)
+				log.Printf("LOAD_MEMBER %s.%s got %+v", vo, stringtable[op.opdata.asInt()], memb)
 			}
 			this.data_stack.push(memb)
 		case LOAD_INDEXED:
@@ -414,7 +414,7 @@ func (this *vm) Run() value {
 			log.Printf("Setting %+v to %+v", idx, nv)
 			obj.odata.primitiveData.(valueArrayData).Set(idx, nv)
 		case LOAD:
-			sv, ok := this.findVar(op.odata.asInt())
+			sv, ok := this.findVar(op.opdata.asInt())
 			if !ok {
 				panic("var not found")
 			}
@@ -459,7 +459,7 @@ func (this *vm) Run() value {
 
 func (this *vm) handleCall(op opcode, isNew bool) {
 	// my, this is inefficient
-	builtinArgs := this.data_stack.popSlice(op.odata.asInt() + 1)
+	builtinArgs := this.data_stack.popSlice(op.opdata.asInt() + 1)
 
 	fn := builtinArgs[len(builtinArgs)-1]
 	if len(builtinArgs) > 1 {

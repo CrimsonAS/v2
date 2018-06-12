@@ -64,7 +64,7 @@ const (
 	PUSH_NUMBER    // 5
 	PUSH_ARRAY     // [a, b, c...]
 	PUSH_BOOL      // true
-	PUSH_STRING    // "hello" (note: the string index is given via the odata)
+	PUSH_STRING    // "hello" (note: the string index is given via the opdata)
 
 	// LOAD identifier
 	// Pushes a variable onto the stack.
@@ -81,7 +81,7 @@ const (
 	JMP
 
 	// call/new call the topmost function object on the stack.
-	// the odata gives the argument count
+	// the opdata gives the argument count
 	// arguments are on the stack as well.
 	CALL
 	NEW
@@ -128,7 +128,7 @@ const (
 	END_OBJECT
 )
 
-// 'odata' is a piece of information attached to an opcode. It can be nothing,
+// 'opdata' is a piece of information attached to an opcode. It can be nothing,
 // like in the case of an instruction like ADD (as the operands are pushed onto
 // the stack earlier), or an actual value, like when pushing numbers onto the
 // stack.
@@ -136,13 +136,13 @@ const (
 // note that it is only ever valid in the context of the opcode_type for the
 // opcode -- e.g. PUSH_STRING uses it as an index into the string table, not as
 // a number
-type odata float64
+type opdata float64
 
-func (this odata) asFloat64() float64 {
+func (this opdata) asFloat64() float64 {
 	return float64(this)
 }
 
-func (this odata) asInt() int {
+func (this opdata) asInt() int {
 	return int(this)
 }
 
@@ -152,7 +152,7 @@ type opcode struct {
 	otype opcode_type
 
 	// what data is attached to it?
-	odata odata
+	opdata opdata
 }
 
 func (this opcode) String() string {
@@ -218,35 +218,35 @@ func (this opcode) String() string {
 	case PUSH_NULL:
 		return "PUSH null"
 	case PUSH_NUMBER:
-		return fmt.Sprintf("PUSH number(%f)", this.odata)
+		return fmt.Sprintf("PUSH number(%f)", this.opdata)
 	case PUSH_ARRAY:
-		return fmt.Sprintf("PUSH array(%f)", this.odata)
+		return fmt.Sprintf("PUSH array(%f)", this.opdata)
 	case PUSH_STRING:
-		return fmt.Sprintf("PUSH string(%d, \"%s\")", int(this.odata), stringtable[int(this.odata)])
+		return fmt.Sprintf("PUSH string(%d, \"%s\")", int(this.opdata), stringtable[int(this.opdata)])
 	case PUSH_BOOL:
-		return fmt.Sprintf("PUSH bool(%f)", this.odata)
+		return fmt.Sprintf("PUSH bool(%f)", this.opdata)
 	case JMP:
-		return fmt.Sprintf("JMP %d", int(this.odata))
+		return fmt.Sprintf("JMP %d", int(this.opdata))
 	case CALL:
-		return fmt.Sprintf("CALL(argc: %d)", int(this.odata))
+		return fmt.Sprintf("CALL(argc: %d)", int(this.opdata))
 	case NEW:
-		return fmt.Sprintf("NEW(argc: %d)", int(this.odata))
+		return fmt.Sprintf("NEW(argc: %d)", int(this.opdata))
 	case IN_FUNCTION:
-		return fmt.Sprintf("function %s:", stringtable[int(this.odata)])
+		return fmt.Sprintf("function %s:", stringtable[int(this.opdata)])
 	case JNE:
-		return fmt.Sprintf("JNE %d", int(this.odata))
+		return fmt.Sprintf("JNE %d", int(this.opdata))
 	case RETURN:
 		return "RETURN"
 	case STORE:
-		return fmt.Sprintf("STORE %s", stringtable[int(this.odata)])
+		return fmt.Sprintf("STORE %s", stringtable[int(this.opdata)])
 	case DECLARE:
-		return fmt.Sprintf("DECLARE %s", stringtable[int(this.odata)])
+		return fmt.Sprintf("DECLARE %s", stringtable[int(this.opdata)])
 	case LOAD:
-		return fmt.Sprintf("LOAD %s", stringtable[int(this.odata)])
+		return fmt.Sprintf("LOAD %s", stringtable[int(this.opdata)])
 	case LOAD_MEMBER:
-		return fmt.Sprintf("LOAD_MEMBER %s", stringtable[int(this.odata)])
+		return fmt.Sprintf("LOAD_MEMBER %s", stringtable[int(this.opdata)])
 	case STORE_MEMBER:
-		return fmt.Sprintf("STORE_MEMBER %s", stringtable[int(this.odata)])
+		return fmt.Sprintf("STORE_MEMBER %s", stringtable[int(this.opdata)])
 	case LOAD_INDEXED:
 		return fmt.Sprintf("LOAD_INDEXED")
 	case STORE_INDEXED:
@@ -256,14 +256,14 @@ func (this opcode) String() string {
 	}
 }
 
-// create an opcode with no odata
+// create an opcode with no opdata
 func simpleOp(o opcode_type) opcode {
 	return opcode{o, 0}
 }
 
-// create an opcode with odata 'i'
+// create an opcode with opdata 'i'
 func newOpcode(o opcode_type, i float64) opcode {
-	return opcode{o, odata(i)}
+	return opcode{o, opdata(i)}
 }
 
 func callBuiltinAddr(this *vm, params []*parser.IdentifierLiteral, addr int) func(vm *vm, f value, args []value) value {

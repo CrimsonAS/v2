@@ -61,6 +61,10 @@ func TestObjectObject(t *testing.T) {
 			in:  `var bo = new Object(); bo.hasOwnProperty("foo")`,
 			out: newBool(false),
 		},
+		simpleVMTest{
+			in:  `var bo = new Object(); bo[55] = 66; bo[55]`,
+			out: newNumber(66),
+		},
 	}
 	runSimpleVMTestHelper(t, tests)
 }

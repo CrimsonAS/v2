@@ -31,6 +31,7 @@ import (
 	"github.com/CrimsonAS/v2/parser"
 	"log"
 	"math"
+	"strconv"
 )
 
 type stackFrame struct {
@@ -383,9 +384,6 @@ func (this *vm) Run() value {
 				vo = v.(valueObject)
 			}
 			vo.put(this, stringtable[op.opdata.asInt()], nv, true)
-			if execDebug {
-				log.Printf("STORE_MEMBER %s.%s = %+v", vo, stringtable[op.opdata.asInt()], nv)
-			}
 		case LOAD_MEMBER:
 			v := this.data_stack.pop()
 			var vo valueObject
@@ -395,28 +393,44 @@ func (this *vm) Run() value {
 			} else {
 				vo = v.(valueObject)
 			}
-			memb := vo.get(this, stringtable[op.opdata.asInt()])
-			if execDebug {
-				log.Printf("LOAD_MEMBER %s.%s got %+v", vo, stringtable[op.opdata.asInt()], memb)
-			}
-			this.data_stack.push(memb)
+			this.data_stack.push(vo.get(this, stringtable[op.opdata.asInt()]))
 		case LOAD_INDEXED:
-			obj := this.lastLoadedVar.ToObject()
-			if ao, ok := obj.odata.(*arrayObjectData); ok {
-				idx := this.data_stack.pop().ToInteger()
+			idx := this.data_stack.pop().ToInteger()
+			v := this.data_stack.pop()
+			var vo valueObject
+			if v.hasPrimitiveBase() {
+				// Would be nice if we could do this at codegen time...
+				vo = v.ToObject()
+			} else {
+				vo = v.(valueObject)
+			}
+
+			if ao, ok := vo.odata.(*arrayObjectData); ok {
 				this.data_stack.push(ao.primitiveData.(valueArrayData).Get(idx))
 			} else {
-				panic("LOAD_INDEXED not an array")
+				// Fall back to string properties. Not ideal!
+				sidx := strconv.Itoa(idx)
+				this.data_stack.push(vo.get(this, sidx))
+
 			}
 		case STORE_INDEXED:
-			obj := this.lastLoadedVar.ToObject()
-			if ao, ok := obj.odata.(*arrayObjectData); ok {
-				this.data_stack.pop() // discard the LOAD
-				idx := this.data_stack.pop().ToInteger()
-				nv := this.data_stack.pop()
+			v := this.data_stack.pop()
+			idx := this.data_stack.pop().ToInteger()
+			var vo valueObject
+			if v.hasPrimitiveBase() {
+				// Would be nice if we could do this at codegen time...
+				vo = v.ToObject()
+			} else {
+				vo = v.(valueObject)
+			}
+
+			nv := this.data_stack.pop()
+			if ao, ok := vo.odata.(*arrayObjectData); ok {
 				ao.primitiveData.(valueArrayData).Set(idx, nv)
 			} else {
-				panic("STORE_INDEXED not an array")
+				// Fall back to string properties. Not ideal!
+				sidx := strconv.Itoa(idx)
+				vo.put(this, sidx, nv, true)
 			}
 		case LOAD:
 			sv, ok := this.findVar(op.opdata.asInt())

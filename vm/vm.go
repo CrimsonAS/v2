@@ -371,7 +371,7 @@ func (this *vm) Run() value {
 			v := this.data_stack.pop()
 			ok := this.setVar(op.opdata.asInt(), v)
 			if !ok {
-				panic("var not found")
+				panic(fmt.Sprintf("var %s not found", stringtable[op.opdata.asInt()]))
 			}
 		case STORE_MEMBER:
 			v := this.data_stack.pop()

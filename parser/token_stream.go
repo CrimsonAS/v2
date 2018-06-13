@@ -406,7 +406,7 @@ func (this *tokenStream) consumeNumber(firstDigit byte) *token {
 	for !this.stream.eof() && isDigit(this.stream.peek()) {
 		c.value += string(this.stream.next())
 	}
-	if c.value == "0" && this.stream.peek() == 'x' {
+	if !this.stream.eof() && c.value == "0" && this.stream.peek() == 'x' {
 		c.value += string(this.stream.next()) // consume 'x'
 		for !this.stream.eof() && isHexDigit(this.stream.peek()) {
 			c.value += string(this.stream.next())

@@ -239,6 +239,18 @@ func TestStringLiterals(t *testing.T) {
 func TestNumberLiterals(t *testing.T) {
 	tests := []tokenStreamTest{
 		tokenStreamTest{
+			input: "0",
+			output: []token{
+				token{
+					tokenType: NUMERIC_LITERAL,
+					value:     "0",
+					pos:       0,
+					col:       0,
+					line:      0,
+				},
+			},
+		},
+		tokenStreamTest{
 			input: "1",
 			output: []token{
 				token{

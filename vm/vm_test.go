@@ -267,6 +267,22 @@ func TestSimple(t *testing.T) {
 			in:  "1!=1",
 			out: newBool(false),
 		},
+		simpleVMTest{
+			in:  "1&&0",
+			out: newBool(false),
+		},
+		simpleVMTest{
+			in:  "0&&0",
+			out: newBool(false),
+		},
+		simpleVMTest{
+			in:  "0&&1",
+			out: newBool(false),
+		},
+		simpleVMTest{
+			in:  "1&&1",
+			out: newBool(true),
+		},
 	}
 
 	runSimpleVMTestHelper(t, tests)

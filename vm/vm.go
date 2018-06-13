@@ -323,6 +323,9 @@ func (this *vm) Run() value {
 		case LESS_THAN_EQ:
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newBool(vals[1].ToNumber() <= vals[0].ToNumber()))
+		case LOGICAL_AND:
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newBool(vals[1].ToBoolean() && vals[0].ToBoolean()))
 		case JMP:
 			this.ip += op.opdata.asInt()
 		case JNE:

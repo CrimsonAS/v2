@@ -107,6 +107,7 @@ const (
 	EQUALS
 	NOT_EQUALS
 	LESS_THAN_EQ
+	LOGICAL_AND
 
 	INCREMENT // a++
 	DECREMENT // a--
@@ -205,6 +206,8 @@ func (this opcode) String() string {
 		return "<"
 	case LESS_THAN_EQ:
 		return "<="
+	case LOGICAL_AND:
+		return "&&"
 	case GREATER_THAN:
 		return "<"
 	case EQUALS:
@@ -712,6 +715,8 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 			codebuf = append(codebuf, simpleOp(NOT_EQUALS))
 		case parser.LESS_EQ:
 			codebuf = append(codebuf, simpleOp(LESS_THAN_EQ))
+		case parser.LOGICAL_AND:
+			codebuf = append(codebuf, simpleOp(LOGICAL_AND))
 		default:
 			panic(fmt.Sprintf("unknown operator %s", n.Operator()))
 		}

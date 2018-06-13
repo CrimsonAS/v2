@@ -395,11 +395,17 @@ func (this *vm) generateCodeForStatement(node parser.Node) []opcode {
 			update = this.generateCode(n.Update)
 		}
 		body := this.generateCode(n.Body)
-		codebuf = append(codebuf, test...)
-		codebuf = append(codebuf, newOpcode(JNE, float64(len(update)+len(body)+1))) // jump over the update, body and JMP
+		jumpLen := 0
+		if len(test) > 0 {
+			codebuf = append(codebuf, test...)
+			codebuf = append(codebuf, newOpcode(JNE, float64(len(update)+len(body)+1))) // jump over the update, body and JMP
+			jumpLen = 2                                                                 // back over the JNE
+		} else {
+			jumpLen = 1 // back over the JMP only
+		}
 		codebuf = append(codebuf, body...)
 		codebuf = append(codebuf, update...)
-		codebuf = append(codebuf, newOpcode(JMP, float64(-(len(body)+len(update)+len(test)+2)))) // back to the test start
+		codebuf = append(codebuf, newOpcode(JMP, float64(-(len(body)+len(update)+len(test)+jumpLen)))) // back to the test start
 	case *parser.DoWhileStatement:
 		codebuf = append(codebuf, this.generateCode(n.Body)...)               // do { n.Body }
 		codebuf = append(codebuf, this.generateCode(n.X)...)                  // while (X)

@@ -270,8 +270,8 @@ func (this valueObject) ToBoolean() bool {
 }
 
 func (this valueObject) ToString() valueString {
-	if this.odata.objectType == STRING_OBJECT {
-		return this.odata.primitiveData.ToString()
+	if sd, ok := this.odata.(*stringObjectData); ok {
+		return sd.primitiveData.ToString()
 	}
 	return "[object]"
 }

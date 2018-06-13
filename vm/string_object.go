@@ -32,18 +32,23 @@ import (
 	"strings"
 )
 
+type stringObjectData struct {
+	*valueObjectData
+	primitiveData valueString
+}
+
+func (this *stringObjectData) Prototype() *valueObject {
+	return &stringProto
+}
+
 func newStringObject(s string) valueObject {
-	v := newObject()
-	v.odata.objectType = STRING_OBJECT
-	v.odata.primitiveData = newString(s)
-	v.odata.prototype = &stringProto
-	return v
+	return valueObject{&stringObjectData{&valueObjectData{}, newString(s)}}
 }
 
 var stringProto valueObject
 
 func defineStringCtor(vm *vm) value {
-	stringProto = newObject()
+	stringProto = valueObject{&rootObjectData{&valueObjectData{extensible: true}}}
 	stringProto.defineDefaultProperty(vm, "toString", newFunctionObject(string_prototype_toString, nil), 0)
 	stringProto.defineDefaultProperty(vm, "valueOf", newFunctionObject(string_prototype_valueOf, nil), 0)
 	stringProto.defineDefaultProperty(vm, "charAt", newFunctionObject(string_prototype_charAt, nil), 1)
@@ -56,7 +61,7 @@ func defineStringCtor(vm *vm) value {
 	stringProto.defineDefaultProperty(vm, "trim", newFunctionObject(string_prototype_trim, nil), 0)
 
 	stringO := newFunctionObject(string_call, string_ctor)
-	stringO.odata.prototype = &stringProto
+	stringO.odata.(*functionObjectData).prototype = &stringProto
 
 	stringProto.defineDefaultProperty(vm, "constructor", stringO, 0)
 
@@ -84,8 +89,8 @@ func string_prototype_toString(vm *vm, f value, args []value) value {
 	case valueString:
 		return newString(f.ToString().String())
 	case valueObject:
-		if o.odata.objectType == STRING_OBJECT {
-			return newString(o.odata.primitiveData.ToString().String())
+		if sd, ok := o.odata.(*stringObjectData); ok {
+			return newString(sd.primitiveData.ToString().String())
 		}
 	default:
 		panic(fmt.Sprintf("Not a string! %s", f)) // ### throw
@@ -98,8 +103,8 @@ func string_prototype_valueOf(vm *vm, f value, args []value) value {
 	case valueString:
 		return newString(f.ToString().String())
 	case valueObject:
-		if o.odata.objectType == STRING_OBJECT {
-			return newString(o.odata.primitiveData.ToString().String())
+		if sd, ok := o.odata.(*stringObjectData); ok {
+			return newString(sd.primitiveData.ToString().String())
 		}
 	default:
 		panic(fmt.Sprintf("Not a string! %s", f)) // ### throw

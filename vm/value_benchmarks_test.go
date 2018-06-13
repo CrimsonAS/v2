@@ -113,13 +113,34 @@ func BenchmarkSimpleTypesFromVM(b *testing.B) {
 	})
 }
 
+func BenchmarkObjectTypesFromVM(b *testing.B) {
+	b.Run("array", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New(`var v = new Array(0)`)
+			v.Run()
+		}
+	})
+	b.Run("bool", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New("var v = new Boolean(true)")
+			v.Run()
+		}
+	})
+	b.Run("string", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := New("var v = new String(\"\")")
+			v.Run()
+		}
+	})
+}
+
 func BenchmarkObjectTypes(b *testing.B) {
 	testfn := func(vm *vm, f value, args []value) value {
 		return newUndefined()
 	}
 	b.Run("object", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			newObject()
+			newBasicObject()
 		}
 	})
 	b.Run("bool", func(b *testing.B) {
@@ -160,15 +181,6 @@ func BenchmarkObjectTypes(b *testing.B) {
 	b.Run("function_both", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			newFunctionObject(testfn, testfn)
-		}
-	})
-}
-
-func BenchmarkObjectFromSimpleType(b *testing.B) {
-	b.Run("string_5c", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			v := New(`var s = "hello"; s.toString()`)
-			v.Run()
 		}
 	})
 }

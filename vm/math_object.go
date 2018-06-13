@@ -32,8 +32,7 @@ import (
 )
 
 func defineMathObject(vm *vm) valueObject {
-	mathO := newObject()
-	mathO.odata.prototype = &objectProto
+	mathO := valueObject{&rootObjectData{&valueObjectData{extensible: true}}}
 
 	mathO.defineReadonlyProperty(vm, "E", newNumber(2.7182818284590452354), 1)
 	mathO.defineReadonlyProperty(vm, "LN10", newNumber(2.302585092994046), 1)

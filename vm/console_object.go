@@ -31,7 +31,7 @@ import (
 )
 
 func defineConsoleObject(vm *vm) value {
-	consoleO := newObject()
+	consoleO := valueObject{&rootObjectData{&valueObjectData{extensible: true}}}
 	consoleO.defineDefaultProperty(vm, "log", newFunctionObject(console_log, nil), 0)
 	return consoleO
 }

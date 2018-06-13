@@ -208,8 +208,7 @@ func (this *vm) Run() value {
 			}
 			this.data_stack.push(newBool(b))
 		case NEW_OBJECT:
-			o := newObject()
-			o.odata.prototype = &objectProto // ### belongs in newObject?
+			o := newBasicObject()
 			this.data_stack.push(o)
 		case DEFINE_PROPERTY:
 			val := this.data_stack.pop()
@@ -398,21 +397,22 @@ func (this *vm) Run() value {
 			this.data_stack.push(memb)
 		case LOAD_INDEXED:
 			obj := this.lastLoadedVar.ToObject()
-			if obj.odata.objectType != ARRAY_OBJECT {
+			if ao, ok := obj.odata.(*arrayObjectData); ok {
+				idx := this.data_stack.pop().ToInteger()
+				this.data_stack.push(ao.primitiveData.(valueArrayData).Get(idx))
+			} else {
 				panic("LOAD_INDEXED not an array")
 			}
-			idx := this.data_stack.pop().ToInteger()
-			this.data_stack.push(obj.odata.primitiveData.(valueArrayData).Get(idx))
 		case STORE_INDEXED:
 			obj := this.lastLoadedVar.ToObject()
-			if obj.odata.objectType != ARRAY_OBJECT {
+			if ao, ok := obj.odata.(*arrayObjectData); ok {
+				this.data_stack.pop() // discard the LOAD
+				idx := this.data_stack.pop().ToInteger()
+				nv := this.data_stack.pop()
+				ao.primitiveData.(valueArrayData).Set(idx, nv)
+			} else {
 				panic("STORE_INDEXED not an array")
 			}
-			this.data_stack.pop() // discard the LOAD
-			idx := this.data_stack.pop().ToInteger()
-			nv := this.data_stack.pop()
-			log.Printf("Setting %+v to %+v", idx, nv)
-			obj.odata.primitiveData.(valueArrayData).Set(idx, nv)
 		case LOAD:
 			sv, ok := this.findVar(op.opdata.asInt())
 			if !ok {
@@ -442,8 +442,8 @@ func (this *vm) Run() value {
 			case valueString:
 				this.data_stack.push(newString("string"))
 			case valueObject:
-				switch n.odata.objectType {
-				case FUNCTION_OBJECT:
+				switch n.odata.(type) {
+				case *functionObjectData:
 					this.data_stack.push(newString("function"))
 				default:
 					this.data_stack.push(newString("object"))

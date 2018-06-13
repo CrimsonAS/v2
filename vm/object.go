@@ -27,20 +27,7 @@
 package vm
 
 import (
-	"fmt"
 	"log"
-)
-
-type objectType uint8
-
-const (
-	NOT_AN_OBJECT objectType = iota
-	OBJECT_PLAIN
-	BOOLEAN_OBJECT
-	NUMBER_OBJECT
-	STRING_OBJECT
-	FUNCTION_OBJECT
-	ARRAY_OBJECT
 )
 
 func (this valueObject) defineDefaultProperty(vm *vm, prop string, v value, lt int) bool {
@@ -67,14 +54,14 @@ func (this valueObject) canPut(vm *vm, prop string) bool {
 		}
 	}
 
-	proto := this.odata.prototype
+	proto := this.odata.Prototype()
 	if proto == nil {
-		return this.odata.extensible
+		return this.odata.IsExtensible()
 	}
 
 	inherited := proto.getProperty(vm, prop)
 	if inherited == nil {
-		return this.odata.extensible
+		return this.odata.IsExtensible()
 	}
 
 	if inherited.isAccessorDescriptor() {
@@ -84,7 +71,7 @@ func (this valueObject) canPut(vm *vm, prop string) bool {
 			return true
 		}
 	} else {
-		if !this.odata.extensible {
+		if !this.odata.IsExtensible() {
 			return false
 		} else {
 			return inherited.writable
@@ -96,11 +83,11 @@ func (this valueObject) canPut(vm *vm, prop string) bool {
 // ### ArrayObject [[DefineOwnProperty]] 15.4.5.1
 func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool {
 	if objectDebug {
-		log.Printf("Defining %s on %s %t", prop, this, this.odata.extensible)
+		log.Printf("Defining %s on %s %t", prop, this, this.odata.IsExtensible())
 	}
 	current := this.getOwnProperty(vm, prop)
 	if current == nil {
-		extensible := this.odata.extensible
+		extensible := this.odata.IsExtensible()
 		if !extensible {
 			if throw {
 				vm.ThrowTypeError("Object is not extensible")
@@ -114,7 +101,7 @@ func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDes
 		} else {
 			pd = &propertyDescriptor{name: prop, get: desc.get, hasGet: true, set: desc.set, hasSet: true, enumerable: desc.enumerable, hasEnumerable: true, configurable: desc.configurable, hasConfigurable: true}
 		}
-		this.odata.properties = append(this.odata.properties, pd)
+		this.odata.(objectData).AppendProperty(pd)
 		//log.Printf("Added new property %s %+v", prop, pd)
 		return true
 	}
@@ -261,15 +248,16 @@ func (this valueObject) get(vm *vm, prop string) value {
 }
 
 func (this valueObject) getOwnProperty(vm *vm, prop string) *propertyDescriptor {
+	props := this.odata.(objectData).Properties()
 	if objectDebug {
-		log.Printf("GetOwnProperty %T.%s %d props", this, prop, len(this.odata.properties))
+		log.Printf("GetOwnProperty %T.%s %d props", this, prop, len(props))
 	}
-	for idx, _ := range this.odata.properties {
+	for idx, _ := range props {
 		if objectDebug {
-			log.Printf("Looking for %s found %s", prop, this.odata.properties[idx].name)
+			log.Printf("Looking for %s found %s", prop, props[idx].name)
 		}
-		if this.odata.properties[idx].name == prop {
-			return this.odata.properties[idx]
+		if props[idx].name == prop {
+			return props[idx]
 		}
 	}
 
@@ -283,11 +271,12 @@ func (this valueObject) getProperty(vm *vm, prop string) *propertyDescriptor {
 		return pd
 	}
 
-	if this.odata.prototype == nil {
+	po := this.odata.Prototype()
+	if po == nil {
 		return nil
 	}
 
-	return this.odata.prototype.getProperty(vm, prop)
+	return po.getProperty(vm, prop)
 }
 
 type foFn func(vm *vm, f value, args []value) value
@@ -332,46 +321,31 @@ func (this *propertyDescriptor) isAccessorDescriptor() bool {
 }
 
 type valueObject struct {
-	odata *valueObjectData
+	odata objectData
+}
+
+type objectData interface {
+	Prototype() *valueObject
+	Properties() []*propertyDescriptor
+	AppendProperty(pd *propertyDescriptor)
+	IsExtensible() bool
 }
 
 type valueObjectData struct {
-	primitiveData value
-	objectType    objectType
-	prototype     *valueObject
-	properties    []*propertyDescriptor
-	callPtr       foFn // used for function object
-	constructPtr  foFn // used for function object
-	extensible    bool // ### is this needed?
+	properties []*propertyDescriptor
+	extensible bool // ### is this needed?
+}
+
+func (this *valueObjectData) AppendProperty(pd *propertyDescriptor) {
+	this.properties = append(this.properties, pd)
+}
+
+func (this *valueObjectData) Properties() []*propertyDescriptor {
+	return this.properties
+}
+
+func (this *valueObjectData) IsExtensible() bool {
+	return this.extensible
 }
 
 const objectDebug = false
-
-func newNumberObject(n float64) valueObject {
-	v := valueObject{&valueObjectData{extensible: true}}
-	v.odata.objectType = NUMBER_OBJECT
-	v.odata.primitiveData = newNumber(n)
-	return v
-}
-
-func newFunctionObject(call foFn, construct foFn) valueObject {
-	v := valueObject{&valueObjectData{extensible: true}}
-	v.odata.objectType = FUNCTION_OBJECT
-	v.odata.callPtr = call
-	v.odata.constructPtr = construct
-	return v
-}
-
-func (this valueObject) call(vm *vm, thisArg value, args []value) value {
-	if this.odata.objectType != FUNCTION_OBJECT {
-		panic(fmt.Sprintf("can't call non-function! %d", this.odata.objectType))
-	}
-	return this.odata.callPtr(vm, thisArg, args)
-}
-
-func (this valueObject) construct(vm *vm, thisArg value, args []value) value {
-	if this.odata.objectType != FUNCTION_OBJECT {
-		panic(fmt.Sprintf("can't call non-function! %d", this.odata.objectType))
-	}
-	return this.odata.constructPtr(vm, thisArg, args)
-}

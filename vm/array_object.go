@@ -26,21 +26,24 @@
 
 package vm
 
-import ()
+type arrayObjectData struct {
+	*valueObjectData
+	primitiveData value
+}
+
+func (this *arrayObjectData) Prototype() *valueObject {
+	return &arrayProto
+}
 
 func newArrayObject(s []value) valueObject {
-	// Ensure we get consistent handling of this for testing's sake
-	v := newObject()
-	v.odata.objectType = ARRAY_OBJECT
-	v.odata.primitiveData = newArrayData(s)
-	v.odata.prototype = &arrayProto
+	v := valueObject{&arrayObjectData{&valueObjectData{extensible: true}, newArrayData(s)}}
 	return v
 }
 
 var arrayProto valueObject
 
 func defineArrayCtor(vm *vm) value {
-	arrayProto = newObject()
+	arrayProto = valueObject{&rootObjectData{&valueObjectData{extensible: true}}}
 	//arrayProto.defineDefaultProperty(vm, "toString", newFunctionObject(array_prototype_toString, nil), 0)
 
 	arrayO := newFunctionObject(array_call, array_ctor)

@@ -756,7 +756,7 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 
 		for _, n := range this.funcsToDefine {
 			runBuiltin := callBuiltinAddr(this, n.Parameters, len(codebuf))
-			callFn := newFunctionObject(runBuiltin, nil)
+			callFn := newFunctionObject(runBuiltin, runBuiltin)
 			varIdx := appendStringtable(n.Identifier.String())
 			this.defineVar(varIdx, callFn)
 

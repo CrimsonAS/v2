@@ -435,6 +435,10 @@ func TestReturnStatement(t *testing.T) {
 			in:  "function a() { return 10; } function b() { return 5; } var c = b(); c;",
 			out: newNumber(5),
 		},
+		simpleVMTest{
+			in:  "function a() { return 10; } var b = new a(); b;",
+			out: newNumber(10),
+		},
 	}
 
 	runSimpleVMTestHelper(t, tests)

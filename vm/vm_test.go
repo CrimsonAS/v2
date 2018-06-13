@@ -283,6 +283,14 @@ func TestSimple(t *testing.T) {
 			in:  "1&&1",
 			out: newBool(true),
 		},
+		simpleVMTest{
+			in:  "1,2",
+			out: newNumber(2),
+		},
+		simpleVMTest{
+			in:  "var a; var b; a=0, b=2",
+			out: newUndefined(),
+		},
 	}
 
 	runSimpleVMTestHelper(t, tests)

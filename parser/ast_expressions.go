@@ -165,7 +165,8 @@ func (this *CallExpression) token() token {
 type SequenceExpression struct {
 	Node
 	tok token
-	Seq []Node
+	X   Node
+	Y   Node
 }
 
 func (this *SequenceExpression) token() token {

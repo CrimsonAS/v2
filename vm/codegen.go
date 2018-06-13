@@ -202,6 +202,8 @@ func (this opcode) String() string {
 		return "INCREMENT"
 	case DECREMENT:
 		return "DECREMENT"
+	case POP:
+		return "POP"
 	case LESS_THAN:
 		return "<"
 	case LESS_THAN_EQ:
@@ -465,6 +467,9 @@ func (this *vm) generateCodeForStatement(node parser.Node) []opcode {
 func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 	codebuf := []opcode{}
 	switch n := node.(type) {
+	case *parser.SequenceExpression:
+		codebuf = append(codebuf, this.generateCode(n.X)...) // ### this is leaked to the stack if it isn't assigned away
+		codebuf = append(codebuf, this.generateCode(n.Y)...)
 	case *parser.FunctionExpression:
 		this.funcsToDefine = append(this.funcsToDefine, n)
 	case *parser.NewExpression:
@@ -800,6 +805,8 @@ func (this *vm) generateCode(node parser.Node) []opcode {
 	case *parser.EmptyStatement:
 		return this.generateCodeForStatement(n)
 
+	case *parser.SequenceExpression:
+		return this.generateCodeForExpression(n)
 	case *parser.FunctionExpression:
 		return this.generateCodeForExpression(n)
 	case *parser.NewExpression:

@@ -459,16 +459,11 @@ func (this *parser) parseAssignmentExpression() Node {
 func (this *parser) parseExpression() Node {
 	left := this.parseAssignmentExpression()
 
-	tok := this.stream.peek()
-	if tok.tokenType == COMMA {
-		seq := []Node{left}
-		for this.stream.peek().tokenType == COMMA {
-			this.expect(COMMA)
-			seq = append(seq, this.parseAssignmentExpression())
-		}
-
-		return &SequenceExpression{tok: tok, Seq: seq}
+	for this.stream.peek().tokenType == COMMA {
+		tok := this.expect(COMMA)
+		left = &SequenceExpression{tok: tok, X: left, Y: this.parseAssignmentExpression()}
 	}
+
 	return left
 }
 
@@ -911,14 +906,7 @@ func RecursivelyPrint(node Node) string {
 	case *ConditionalExpression:
 		return fmt.Sprintf("%s ? %s : %s", RecursivelyPrint(n.X), RecursivelyPrint(n.Then), RecursivelyPrint(n.Else))
 	case *SequenceExpression:
-		buf := ""
-		for _, a := range n.Seq {
-			buf += fmt.Sprintf("%s, ", RecursivelyPrint(a))
-		}
-		if len(buf) > 0 {
-			buf = buf[:len(buf)-2]
-		}
-		return buf
+		return fmt.Sprintf("%s, %s", RecursivelyPrint(n.X), RecursivelyPrint(n.Y))
 	case *AssignmentExpression:
 		switch n.token().tokenType {
 		case ASSIGNMENT:

@@ -530,17 +530,18 @@ func TestConditionalExpression(t *testing.T) {
 func TestSequenceExpression(t *testing.T) {
 	ep1 := &Program{body: []Node{
 		&ExpressionStatement{X: &SequenceExpression{
-			tok: token{tokenType: COMMA, value: "", pos: 1, col: 1},
-			Seq: []Node{
-				&IdentifierLiteral{
-					tok: token{tokenType: IDENTIFIER, value: "a"},
+			tok: token{tokenType: COMMA, value: "", pos: 3, col: 3},
+			X: &SequenceExpression{
+				tok: token{tokenType: COMMA, value: "", pos: 1, col: 1},
+				X: &IdentifierLiteral{
+					tok: token{tokenType: IDENTIFIER, value: "a", pos: 0, col: 0},
 				},
-				&IdentifierLiteral{
+				Y: &IdentifierLiteral{
 					tok: token{tokenType: IDENTIFIER, value: "b", pos: 2, col: 2},
 				},
-				&IdentifierLiteral{
-					tok: token{tokenType: IDENTIFIER, value: "c", pos: 4, col: 4},
-				},
+			},
+			Y: &IdentifierLiteral{
+				tok: token{tokenType: IDENTIFIER, value: "c", pos: 4, col: 4},
 			},
 		},
 		}}}

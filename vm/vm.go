@@ -326,6 +326,8 @@ func (this *vm) Run() value {
 		case LOGICAL_AND:
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newBool(vals[1].ToBoolean() && vals[0].ToBoolean()))
+		case POP:
+			this.data_stack.pop()
 		case JMP:
 			this.ip += op.opdata.asInt()
 		case JNE:

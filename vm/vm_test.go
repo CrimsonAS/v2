@@ -367,6 +367,10 @@ func TestVar(t *testing.T) {
 			in:  "var a = 5; a",
 			out: newNumber(5),
 		},
+		simpleVMTest{
+			in:  "var a = 5; var a; a",
+			out: newNumber(5),
+		},
 	}
 
 	runSimpleVMTestHelper(t, tests)

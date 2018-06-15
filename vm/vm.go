@@ -110,7 +110,8 @@ func (this *vm) findVar(name int) (value, bool) {
 func (this *vm) defineVar(name int, v value) {
 	for _, sfvar := range this.currentFrame.vars {
 		if sfvar == name {
-			panic(fmt.Sprintf("Var %s already defined", stringtable[name]))
+			//panic(fmt.Sprintf("Var %s already defined", stringtable[name]))
+			return
 		}
 	}
 

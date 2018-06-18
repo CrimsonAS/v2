@@ -193,7 +193,10 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 		case TAC_FUNCTION:
 			// ignore for now
 		case TAC_RETURN:
-			// ignore for now
+			if op.arg1.valid {
+				codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			}
+			codebuf = append(codebuf, simpleOp(RETURN))
 		case TAC_LABEL:
 			labels[op.arg1] = labelInfo{bytecodeOffset: len(codebuf)}
 		case TAC_ASSIGN:

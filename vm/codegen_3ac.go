@@ -3,7 +3,6 @@ package vm
 import (
 	"fmt"
 	"github.com/CrimsonAS/v2/parser"
-	"log"
 )
 
 type tac_address struct {
@@ -65,6 +64,9 @@ func (this tac) String() string {
 	}
 	if this.op == TAC_FUNCTION {
 		return fmt.Sprintf("function(%s)", this.arg1)
+	}
+	if this.op == TAC_END_FUNCTION {
+		return fmt.Sprintf("end function(%s)", this.arg1)
 	}
 	if this.op == TAC_RETURN {
 		return fmt.Sprintf("return(%s)", this.arg1)
@@ -135,6 +137,7 @@ const (
 	TAC_LOGICAL_AND
 
 	TAC_FUNCTION
+	TAC_END_FUNCTION
 	TAC_RETURN
 
 	TAC_JNE
@@ -160,14 +163,10 @@ func pushVarOrConstant(addr tac_address) []opcode {
 	return codebuf
 }
 
-func maybePushStore(declaredVars *map[int]bool, result tac_address) []opcode {
+func maybePushStore(result tac_address) []opcode {
 	codebuf := []opcode{}
 	if result.isVar() {
 		varIdx := appendStringtable(result.varname)
-		if _, ok := (*declaredVars)[varIdx]; !ok {
-			codebuf = append(codebuf, newOpcode(DECLARE, float64(varIdx)))
-			(*declaredVars)[varIdx] = true
-		}
 		codebuf = append(codebuf, newOpcode(STORE, float64(varIdx)))
 	}
 	return codebuf
@@ -186,11 +185,26 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 	}
 	jumps := []jumpInfo{}
 
-	declareVars := make(map[int]bool)
-
-	for _, op := range in {
+	for idx, op := range in {
 		switch op.op {
 		case TAC_FUNCTION:
+			// Gather all local declarations
+			declaredVars := make(map[int]bool)
+			for _, nop := range in[idx:] {
+				if nop.op == TAC_END_FUNCTION && nop.arg1 == op.arg1 {
+					break
+				}
+
+				if nop.result.isVar() {
+					varIdx := appendStringtable(nop.result.varname)
+					if _, ok := declaredVars[varIdx]; !ok {
+						declaredVars[varIdx] = true
+						codebuf = append(codebuf, newOpcode(DECLARE, float64(varIdx)))
+					}
+				}
+			}
+
+		case TAC_END_FUNCTION:
 			// ignore for now
 		case TAC_RETURN:
 			if op.arg1.valid {
@@ -201,12 +215,12 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			labels[op.arg1] = labelInfo{bytecodeOffset: len(codebuf)}
 		case TAC_ASSIGN:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
-			codebuf = append(codebuf, maybePushStore(&declareVars, op.result)...)
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_LESS_THAN:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, simpleOp(LESS_THAN))
-			codebuf = append(codebuf, maybePushStore(&declareVars, op.result)...)
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_JNE:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			jumps = append(jumps, jumpInfo{label: op.arg2, bytecodeOffset: len(codebuf)})
@@ -218,13 +232,12 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, simpleOp(ADD))
-			codebuf = append(codebuf, maybePushStore(&declareVars, op.result)...)
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 		default:
 			panic(fmt.Sprintf("unknown tac %s", op))
 		}
 	}
 
-	log.Printf("Labels %s", labels)
 	for _, jmp := range jumps {
 		codebuf[jmp.bytecodeOffset].opdata = opdata(labels[jmp.label].bytecodeOffset - jmp.bytecodeOffset - 1)
 	}
@@ -245,12 +258,14 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 			generateCodeTAC(s, &codebuf)
 		}
 		codebuf = append(codebuf, tac{op: TAC_RETURN})
+		codebuf = append(codebuf, tac{arg1: newConstant(newString("%main")), op: TAC_END_FUNCTION})
 
 		for _, afunc := range funcsToDefine {
 			// parameters, identifier, body
 			codebuf = append(codebuf, tac{arg1: newConstant(newString(afunc.Identifier.String())), op: TAC_FUNCTION})
 			generateCodeTAC(afunc.Body, &codebuf)
 			codebuf = append(codebuf, tac{op: TAC_RETURN})
+			codebuf = append(codebuf, tac{arg1: newConstant(newString(afunc.Identifier.String())), op: TAC_END_FUNCTION})
 		}
 	case *parser.VariableStatement:
 		for idx, _ := range n.Vars {

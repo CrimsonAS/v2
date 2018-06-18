@@ -139,9 +139,9 @@ func New(code string) *vm {
 		il := []tac{}
 		generateCodeTAC(ast, &il)
 
-		for idx, op := range il {
-			log.Printf("%d: %s", idx, op)
-		}
+		//for idx, op := range il {
+		//	log.Printf("%d: %s", idx, op)
+		//}
 
 		vm.code = vm.generateBytecode(il)
 	} else {

@@ -152,14 +152,20 @@ func pushVarOrConstant(addr tac_address) []opcode {
 		rhsIdx := float64(appendStringtable(addr.varname))
 		codebuf = append(codebuf, newOpcode(LOAD, rhsIdx))
 	} else if addr.isConstant() {
-		switch c := addr.constant.(type) {
-		case valueNumber:
-			codebuf = append(codebuf, newOpcode(PUSH_NUMBER, float64(c)))
-		default:
-			panic(fmt.Sprintf("Unknown constant type %T", addr))
-		}
+		codebuf = append(codebuf, pushConstant(addr)...)
 	}
 
+	return codebuf
+}
+
+func pushConstant(addr tac_address) []opcode {
+	codebuf := []opcode{}
+	switch c := addr.constant.(type) {
+	case valueNumber:
+		codebuf = append(codebuf, newOpcode(PUSH_NUMBER, float64(c)))
+	default:
+		panic(fmt.Sprintf("Unknown constant type %T", addr))
+	}
 	return codebuf
 }
 
@@ -170,6 +176,39 @@ func maybePushStore(result tac_address) []opcode {
 		codebuf = append(codebuf, newOpcode(STORE, float64(varIdx)))
 	}
 	return codebuf
+}
+
+func callJsFunction(this *vm, params []*parser.IdentifierLiteral, addr int) func(vm *vm, f value, args []value) value {
+	// Small optimisation: intern strings at codegen time, so we don't have to
+	// hash at runtime.
+	intArgs := []int{}
+	for _, arg := range params {
+		intArgs = append(intArgs, appendStringtable(arg.String()))
+	}
+
+	return func(vm *vm, f value, args []value) value {
+		if execDebug {
+			//log.Printf("Calling func! IP %d going to %d, %s", vm.ip, addr, args)
+		}
+		// alter the IP of the new stack frame the CALL set up to be in
+		// the function's code.
+		vm.ip = addr
+
+		// bit of a dirty hack here. we tell the VM to ignore the return
+		// value of the builtin function, and instead, wait for the
+		// return instruction to pop the stack.
+		vm.ignoreReturn = true
+
+		for idx, arg := range intArgs {
+			v := args[idx]
+			if execDebug {
+				//log.Printf("Defining var %s %s", stringtable[arg], v)
+			}
+			vm.defineVar(arg, v)
+		}
+
+		return newUndefined()
+	}
 }
 
 func (this *vm) generateBytecode(in []tac) []opcode {
@@ -184,11 +223,29 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 		bytecodeOffset int
 	}
 	jumps := []jumpInfo{}
+	paramCount := 0
 
 	for idx, op := range in {
 		switch op.op {
+		case TAC_PUSH_PARAM:
+			paramCount++
+		case TAC_CALL:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, newOpcode(CALL, float64(paramCount)))
+			paramCount = 0
+		case TAC_NEW:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, newOpcode(NEW, float64(paramCount)))
+			paramCount = 0
 		case TAC_FUNCTION:
 			// Gather all local declarations
+			funcIdx := appendStringtable(op.arg1.constant.String())
+
+			runBuiltin := callJsFunction(this, nil /* FIXME */, len(codebuf))
+			callFn := newFunctionObject(runBuiltin, runBuiltin)
+			this.defineVar(funcIdx, callFn)
+
+			codebuf = append(codebuf, newOpcode(IN_FUNCTION, float64(funcIdx)))
 			declaredVars := make(map[int]bool)
 			for _, nop := range in[idx:] {
 				if nop.op == TAC_END_FUNCTION && nop.arg1 == op.arg1 {

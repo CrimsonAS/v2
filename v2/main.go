@@ -38,6 +38,7 @@ import (
 )
 
 func main() {
+	newCompiler := flag.Bool("new-compiler", false, "use new compiler")
 	profile := flag.Bool("profile", false, "enable profiling")
 	showBytecode := flag.Bool("show-bytecode", false, "show bytecode after code generation")
 	flag.Parse()
@@ -48,6 +49,8 @@ func main() {
 			log.Println(http.ListenAndServe("localhost:6060", nil))
 		}()
 	}
+
+	vm.NewCompiler = *newCompiler
 
 	f := ""
 	if flag.NArg() > 0 {

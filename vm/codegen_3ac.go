@@ -88,6 +88,9 @@ func (this tac) String() string {
 	if this.op == TAC_NEW {
 		return fmt.Sprintf("%s = NEW(%s)", this.result, this.arg1)
 	}
+	if this.op == TAC_FUNCTION_PARAMETER {
+		return fmt.Sprintf("function_param(%s)", this.arg1)
+	}
 	if this.op == TAC_FUNCTION {
 		return fmt.Sprintf("function(%s)", this.arg1)
 	}
@@ -162,6 +165,7 @@ const (
 	TAC_LESS_THAN_EQ
 	TAC_LOGICAL_AND
 
+	TAC_FUNCTION_PARAMETER
 	TAC_FUNCTION
 	TAC_END_FUNCTION
 	TAC_RETURN
@@ -204,7 +208,7 @@ func maybePushStore(result tac_address) []opcode {
 	return codebuf
 }
 
-func callJsFunction(this *vm, params []*parser.IdentifierLiteral, addr int) func(vm *vm, f value, args []value) value {
+func callJsFunction(this *vm, params []valueString, addr int) func(vm *vm, f value, args []value) value {
 	// Small optimisation: intern strings at codegen time, so we don't have to
 	// hash at runtime.
 	intArgs := []int{}
@@ -249,6 +253,7 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 		bytecodeOffset int
 	}
 	jumps := []jumpInfo{}
+	paramNames := []valueString{}
 	paramCount := 0
 
 	for idx, op := range in {
@@ -263,13 +268,19 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, newOpcode(NEW, float64(paramCount)))
 			paramCount = 0
+		case TAC_FUNCTION_PARAMETER:
+			if !op.arg1.isConstant() {
+				panic("Not a constant???")
+			}
+			paramNames = append(paramNames, op.arg1.constant.(valueString))
 		case TAC_FUNCTION:
 			// Gather all local declarations
 			funcIdx := appendStringtable(op.arg1.constant.String())
 
-			runBuiltin := callJsFunction(this, nil /* FIXME */, len(codebuf))
+			runBuiltin := callJsFunction(this, paramNames, len(codebuf))
 			callFn := newFunctionObject(runBuiltin, runBuiltin)
 			this.defineVar(funcIdx, callFn)
+			paramNames = paramNames[:]
 
 			codebuf = append(codebuf, newOpcode(IN_FUNCTION, float64(funcIdx)))
 			declaredVars := make(map[int]bool)
@@ -344,7 +355,9 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 		codebuf = append(codebuf, tac{arg1: newConstant(newString("%main")), op: TAC_END_FUNCTION})
 
 		for _, afunc := range funcsToDefine {
-			// parameters, identifier, body
+			for _, p := range afunc.Parameters {
+				codebuf = append(codebuf, tac{arg1: newConstant(newString(p.String())), op: TAC_FUNCTION_PARAMETER})
+			}
 			codebuf = append(codebuf, tac{arg1: newConstant(newString(afunc.Identifier.String())), op: TAC_FUNCTION})
 			generateCodeTAC(afunc.Body, &codebuf)
 			codebuf = append(codebuf, tac{op: TAC_RETURN})

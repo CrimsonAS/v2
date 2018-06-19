@@ -252,6 +252,18 @@ func TestSimple(t *testing.T) {
 			out: newBool(false),
 		},
 		simpleVMTest{
+			in:  "1>=2",
+			out: newBool(false),
+		},
+		simpleVMTest{
+			in:  "2>=1",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "2>=2",
+			out: newBool(true),
+		},
+		simpleVMTest{
 			in:  "1==2",
 			out: newBool(false),
 		},
@@ -289,7 +301,7 @@ func TestSimple(t *testing.T) {
 		},
 		simpleVMTest{
 			in:  "var a; var b; a=0, b=2",
-			out: newUndefined(),
+			out: newNumber(2), // this will fail with the old compiler.
 		},
 	}
 

@@ -330,6 +330,9 @@ func (this *vm) Run() value {
 		case GREATER_THAN:
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newBool(vals[1].ToNumber() > vals[0].ToNumber()))
+		case GREATER_THAN_EQ:
+			vals := this.data_stack.popSlice(2)
+			this.data_stack.push(newBool(vals[1].ToNumber() >= vals[0].ToNumber()))
 		case EQUALS:
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newBool(vals[1].ToNumber() == vals[0].ToNumber()))

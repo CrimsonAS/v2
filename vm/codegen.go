@@ -103,10 +103,11 @@ const (
 	STORE
 
 	LESS_THAN
+	LESS_THAN_EQ
 	GREATER_THAN
+	GREATER_THAN_EQ
 	EQUALS
 	NOT_EQUALS
-	LESS_THAN_EQ
 	LOGICAL_AND
 
 	INCREMENT // a++
@@ -211,7 +212,9 @@ func (this opcode) String() string {
 	case LOGICAL_AND:
 		return "&&"
 	case GREATER_THAN:
-		return "<"
+		return ">"
+	case GREATER_THAN_EQ:
+		return ">="
 	case EQUALS:
 		return "=="
 	case NOT_EQUALS:
@@ -714,6 +717,8 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 			codebuf = append(codebuf, simpleOp(LESS_THAN))
 		case parser.GREATER_THAN:
 			codebuf = append(codebuf, simpleOp(GREATER_THAN))
+		case parser.GREATER_EQ:
+			codebuf = append(codebuf, simpleOp(GREATER_THAN_EQ))
 		case parser.EQUALS:
 			codebuf = append(codebuf, simpleOp(EQUALS))
 		case parser.NOT_EQUALS:

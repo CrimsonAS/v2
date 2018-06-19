@@ -160,6 +160,7 @@ const (
 
 	TAC_LESS_THAN
 	TAC_GREATER_THAN
+	TAC_GREATER_THAN_EQ
 	TAC_EQUALS
 	TAC_NOT_EQUALS
 	TAC_LESS_THAN_EQ
@@ -193,8 +194,18 @@ func pushConstant(addr tac_address) []opcode {
 	switch c := addr.constant.(type) {
 	case valueNumber:
 		codebuf = append(codebuf, newOpcode(PUSH_NUMBER, float64(c)))
+	case valueUndefined:
+		codebuf = append(codebuf, simpleOp(PUSH_UNDEFINED))
+	case valueNull:
+		codebuf = append(codebuf, simpleOp(PUSH_NULL))
+	case valueBool:
+		if c == true {
+			codebuf = append(codebuf, newOpcode(PUSH_BOOL, float64(1)))
+		} else {
+			codebuf = append(codebuf, newOpcode(PUSH_BOOL, float64(0)))
+		}
 	default:
-		panic(fmt.Sprintf("Unknown constant type %T", addr))
+		panic(fmt.Sprintf("Unknown constant type %T %+v", addr, addr))
 	}
 	return codebuf
 }
@@ -315,6 +326,21 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, simpleOp(LESS_THAN))
 			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_LESS_THAN_EQ:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(LESS_THAN_EQ))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_GREATER_THAN:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(GREATER_THAN))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_GREATER_THAN_EQ:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(GREATER_THAN_EQ))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_JNE:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			jumps = append(jumps, jumpInfo{label: op.arg2, bytecodeOffset: len(codebuf)})
@@ -326,6 +352,31 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, simpleOp(ADD))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_MULTIPLY:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(MULTIPLY))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_DIVIDE:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(DIVIDE))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_NOT_EQUALS:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(NOT_EQUALS))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_EQUALS:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(EQUALS))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_LOGICAL_AND:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(LOGICAL_AND))
 			codebuf = append(codebuf, maybePushStore(op.result)...)
 		default:
 			panic(fmt.Sprintf("unknown tac %s", op))
@@ -402,7 +453,15 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 	//case *parser.DoWhileStatement:
 	//case *parser.WhileStatement:
 	//case *parser.ConditionalExpression:
-	//case *parser.IfStatement:
+	case *parser.IfStatement:
+		test := generateCodeTAC(n.ConditionExpr, &codebuf)
+		endLbl := newTemporary()
+		codebuf = append(codebuf, tac{op: TAC_JNE, arg1: test, arg2: endLbl})
+		generateCodeTAC(n.ThenStmt, &codebuf) // then
+		codebuf = append(codebuf, tac{arg1: endLbl, op: TAC_LABEL})
+		if n.ElseStmt != nil {
+			generateCodeTAC(n.ElseStmt, &codebuf) // else
+		}
 	case *parser.BlockStatement:
 		for _, s := range n.Body {
 			generateCodeTAC(s, &codebuf)
@@ -430,7 +489,12 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 		retaddr = newTemporary()
 		codebuf = append(codebuf, tac{result: retaddr, arg1: newConstant(newNull()), op: TAC_ASSIGN})
 
-	//case *parser.SequenceExpression:
+	case *parser.SequenceExpression:
+		lref := generateCodeTAC(n.X, &codebuf)
+		codebuf = append(codebuf, tac{result: newTemporary(), arg1: lref, op: TAC_ASSIGN})
+		retaddr = newTemporary()
+		rref := generateCodeTAC(n.Y, &codebuf)
+		codebuf = append(codebuf, tac{result: retaddr, arg1: rref, op: TAC_ASSIGN})
 	case *parser.FunctionExpression:
 		funcsToDefine = append(funcsToDefine, n)
 	case *parser.NewExpression:
@@ -544,8 +608,8 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 				panic(fmt.Sprintf("unknown left hand side for assignment %T", n.Left))
 			}*/
 	case *parser.BinaryExpression:
-		leftRef := generateCodeTAC(n.Left, &codebuf)
 		rightRef := generateCodeTAC(n.Right, &codebuf)
+		leftRef := generateCodeTAC(n.Left, &codebuf)
 		retaddr = newTemporary()
 
 		var realOp tac_op_type
@@ -574,14 +638,16 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 			realOp = TAC_MODULUS
 		case parser.LESS_THAN:
 			realOp = TAC_LESS_THAN
+		case parser.LESS_EQ:
+			realOp = TAC_LESS_THAN_EQ
 		case parser.GREATER_THAN:
 			realOp = TAC_GREATER_THAN
+		case parser.GREATER_EQ:
+			realOp = TAC_GREATER_THAN_EQ
 		case parser.EQUALS:
 			realOp = TAC_EQUALS
 		case parser.NOT_EQUALS:
 			realOp = TAC_NOT_EQUALS
-		case parser.LESS_EQ:
-			realOp = TAC_LESS_THAN_EQ
 		case parser.LOGICAL_AND:
 			realOp = TAC_LOGICAL_AND
 		default:

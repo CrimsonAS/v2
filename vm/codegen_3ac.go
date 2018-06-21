@@ -76,11 +76,23 @@ func (this tac) String() string {
 	if this.op == TAC_ASSIGN {
 		return fmt.Sprintf("%s = %s", this.result, this.arg1)
 	}
+	if this.op == TAC_PUSH_ARRAY_MEMBER {
+		return fmt.Sprintf("PUSH_PARAM %s", this.arg1)
+	}
+	if this.op == TAC_NEW_ARRAY {
+		return fmt.Sprintf("%s = NEW_ARRAY(%s)", this.result, this.arg1)
+	}
 	if this.op == TAC_PUSH_PARAM {
 		return fmt.Sprintf("PUSH_PARAM %s", this.arg1)
 	}
 	if this.op == TAC_LOAD {
 		return fmt.Sprintf("%s = LOAD(%s)", this.result, this.arg1)
+	}
+	if this.op == TAC_LOAD_MEMBER {
+		return fmt.Sprintf("%s = LOAD(%s).%s", this.result, this.arg1, this.arg2)
+	}
+	if this.op == TAC_LOAD_INDEXED_MEMBER {
+		return fmt.Sprintf("%s = LOAD(%s)[%s]", this.result, this.arg1, this.arg2)
 	}
 	if this.op == TAC_CALL {
 		return fmt.Sprintf("%s = CALL(%s)", this.result, this.arg1)
@@ -152,11 +164,15 @@ const (
 
 	TAC_ASSIGN // =
 
+	TAC_PUSH_ARRAY_MEMBER
+	TAC_NEW_ARRAY
+
 	TAC_PUSH_PARAM
 	TAC_CALL
 	TAC_NEW
 	TAC_LOAD
 	TAC_LOAD_MEMBER
+	TAC_LOAD_INDEXED_MEMBER
 
 	TAC_LESS_THAN
 	TAC_GREATER_THAN
@@ -316,6 +332,13 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 				codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			}
 			codebuf = append(codebuf, simpleOp(RETURN))
+		case TAC_LOAD:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_LOAD_INDEXED_MEMBER:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, simpleOp(LOAD_INDEXED))
 		case TAC_LABEL:
 			labels[op.arg1] = labelInfo{bytecodeOffset: len(codebuf)}
 		case TAC_ASSIGN:
@@ -378,6 +401,10 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, simpleOp(LOGICAL_AND))
 			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_PUSH_ARRAY_MEMBER:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+		case TAC_NEW_ARRAY:
+			codebuf = append(codebuf, newOpcode(PUSH_ARRAY, float64(op.arg1.constant.(valueNumber).ToNumber())))
 		default:
 			panic(fmt.Sprintf("unknown tac %s", op))
 		}
@@ -427,7 +454,12 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 			}
 		}
 	case *parser.ExpressionStatement:
-		generateCodeTAC(n.X, &codebuf)
+		// We generate an assignment here for the case of: var a = 5; a
+		// such that 'a' is loaded back onto the stack for returning.
+		// This might not be correct?
+		retaddr = newTemporary()
+		es := generateCodeTAC(n.X, &codebuf)
+		codebuf = append(codebuf, tac{result: retaddr, arg1: es, op: TAC_ASSIGN})
 	case *parser.ReturnStatement:
 		if n.X != nil {
 			retaddr = generateCodeTAC(n.X, &codebuf)
@@ -468,7 +500,13 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 		}
 	case *parser.EmptyStatement:
 
-	//case *parser.ArrayLiteral:
+	case *parser.ArrayLiteral:
+		for _, elem := range n.Elements {
+			param := generateCodeTAC(elem, &codebuf)
+			codebuf = append(codebuf, tac{op: TAC_PUSH_ARRAY_MEMBER, arg1: param})
+		}
+		retaddr = newTemporary()
+		codebuf = append(codebuf, tac{result: retaddr, arg1: newConstant(newNumber(float64(len(n.Elements)))), op: TAC_NEW_ARRAY})
 	//case *parser.ObjectLiteral:
 	//case *parser.ThisLiteral:
 	case *parser.StringLiteral:
@@ -663,7 +701,17 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 
 		retaddr = newTemporary()
 		codebuf = append(codebuf, tac{result: retaddr, op: TAC_LOAD_MEMBER, arg1: base, arg2: newConstant(newString(n.Name.String()))})
-	//case *parser.BracketMemberExpression:
+	case *parser.BracketMemberExpression:
+		fid := generateCodeTAC(n.X, &codebuf)
+		base := newTemporary()
+		codebuf = append(codebuf, tac{result: base, op: TAC_LOAD, arg1: fid})
+
+		rid := generateCodeTAC(n.Y, &codebuf)
+		idx := newTemporary()
+		codebuf = append(codebuf, tac{result: base, op: TAC_ASSIGN, arg1: rid})
+
+		retaddr = newTemporary()
+		codebuf = append(codebuf, tac{result: retaddr, op: TAC_LOAD_INDEXED_MEMBER, arg1: base, arg2: idx})
 
 	default:
 		panic(fmt.Sprintf("unknown node %T", node))

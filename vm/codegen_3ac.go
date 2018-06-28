@@ -247,8 +247,10 @@ func pushVarOrConstant(addr tac_address) []opcode {
 		}
 	} else if addr.isConstant() {
 		codebuf = append(codebuf, pushConstant(addr)...)
-	} else {
+	} else if addr.isTemp() {
 		log.Printf("No push for possible temporary %+v", addr)
+	} else {
+		panic(fmt.Sprintf("Unknown address type %+v", addr))
 	}
 
 	return codebuf
@@ -269,7 +271,17 @@ func maybePushStore(result tac_address) []opcode {
 	} else if result.isVar() {
 		varIdx := appendStringtable(result.varname)
 		codebuf = append(codebuf, newOpcode(STORE, float64(varIdx)))
+	} else if result.isTemp() {
+		// ### this is not strictly speaking correct. DUPing the top of the
+		// stack doesn't give the correct results. we probably need to teach the
+		// VM about temps.
+		//
+		// on the plus side, we won't crash due to running out of stack now.
+		codebuf = append(codebuf, simpleOp(DUP))
+	} else {
+		panic(fmt.Sprintf("Unknown address type %+v", result))
 	}
+
 	return codebuf
 }
 
@@ -406,6 +418,11 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 		case TAC_JMP:
 			jumps = append(jumps, jumpInfo{label: op.arg1, bytecodeOffset: len(codebuf)})
 			codebuf = append(codebuf, newOpcode(JMP, 0))
+		case TAC_SUB:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(SUB))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_ADD:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)

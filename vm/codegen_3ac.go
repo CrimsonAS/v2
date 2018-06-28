@@ -29,12 +29,14 @@ package vm
 import (
 	"fmt"
 	"github.com/CrimsonAS/v2/parser"
+	"log"
 )
 
 type tac_address struct {
 	valid     bool
 	constant  value
 	varname   string
+	reference *tac_address
 	temporary int
 }
 
@@ -46,6 +48,10 @@ func (this tac_address) isVar() bool {
 	return this.varname != "" && this.valid
 }
 
+func (this tac_address) isMember() bool {
+	return this.isVar() && this.reference != nil
+}
+
 func (this tac_address) isTemp() bool {
 	return this.temporary != -1 && this.valid
 }
@@ -55,6 +61,10 @@ func (this tac_address) String() string {
 		return ""
 	}
 	if this.varname != "" {
+		if this.reference != nil {
+			return fmt.Sprintf("%s.%s", this.varname, this.reference)
+		}
+
 		return this.varname
 	}
 
@@ -87,12 +97,6 @@ func (this tac) String() string {
 	}
 	if this.op == TAC_LOAD {
 		return fmt.Sprintf("%s = LOAD(%s)", this.result, this.arg1)
-	}
-	if this.op == TAC_LOAD_MEMBER {
-		return fmt.Sprintf("%s = LOAD(%s).%s", this.result, this.arg1, this.arg2)
-	}
-	if this.op == TAC_LOAD_INDEXED_MEMBER {
-		return fmt.Sprintf("%s = LOAD(%s)[%s]", this.result, this.arg1, this.arg2)
 	}
 	if this.op == TAC_CALL {
 		return fmt.Sprintf("%s = CALL(%s)", this.result, this.arg1)
@@ -128,15 +132,19 @@ var temporaryIndex = -1
 
 func newTemporary() tac_address {
 	temporaryIndex += 1
-	return tac_address{true, newUndefined(), "", temporaryIndex}
+	return tac_address{true, newUndefined(), "", nil, temporaryIndex}
 }
 
 func newConstant(v value) tac_address {
-	return tac_address{true, v, "", -1}
+	return tac_address{true, v, "", nil, -1}
 }
 
 func newVar(n string) tac_address {
-	return tac_address{true, newUndefined(), n, -1}
+	return tac_address{true, newUndefined(), n, nil, -1}
+}
+
+func newReference(n string, m tac_address) tac_address {
+	return tac_address{true, newUndefined(), n, &m, -1}
 }
 
 type tac_op_type int
@@ -171,8 +179,6 @@ const (
 	TAC_CALL
 	TAC_NEW
 	TAC_LOAD
-	TAC_LOAD_MEMBER
-	TAC_LOAD_INDEXED_MEMBER
 
 	TAC_LESS_THAN
 	TAC_GREATER_THAN
@@ -192,19 +198,6 @@ const (
 	TAC_JMP
 )
 
-func pushVarOrConstant(addr tac_address) []opcode {
-	codebuf := []opcode{}
-
-	if addr.isVar() {
-		rhsIdx := float64(appendStringtable(addr.varname))
-		codebuf = append(codebuf, newOpcode(LOAD, rhsIdx))
-	} else if addr.isConstant() {
-		codebuf = append(codebuf, pushConstant(addr)...)
-	}
-
-	return codebuf
-}
-
 func pushConstant(addr tac_address) []opcode {
 	codebuf := []opcode{}
 	switch c := addr.constant.(type) {
@@ -214,6 +207,9 @@ func pushConstant(addr tac_address) []opcode {
 		codebuf = append(codebuf, simpleOp(PUSH_UNDEFINED))
 	case valueNull:
 		codebuf = append(codebuf, simpleOp(PUSH_NULL))
+	case valueString:
+		id := appendStringtable(c.String())
+		codebuf = append(codebuf, newOpcode(PUSH_STRING, float64(id)))
 	case valueBool:
 		if c == true {
 			codebuf = append(codebuf, newOpcode(PUSH_BOOL, float64(1)))
@@ -221,14 +217,56 @@ func pushConstant(addr tac_address) []opcode {
 			codebuf = append(codebuf, newOpcode(PUSH_BOOL, float64(0)))
 		}
 	default:
-		panic(fmt.Sprintf("Unknown constant type %T %+v", addr, addr))
+		panic(fmt.Sprintf("Unknown constant type %T %s", addr, addr.String()))
 	}
+	return codebuf
+}
+
+func pushVarOrConstant(addr tac_address) []opcode {
+	codebuf := []opcode{}
+	log.Printf("pushVarOrConstant %+v", addr)
+
+	if addr.isMember() {
+		log.Printf("Loading member on %s", addr.varname)
+		codebuf = append(codebuf, pushVarOrConstant(newVar(addr.varname))...)
+
+		if addr.reference.isVar() {
+			memberIdx := appendStringtable(addr.reference.varname)
+			codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(memberIdx)))
+		} else {
+			codebuf = append(codebuf, pushVarOrConstant(*addr.reference)...)
+			codebuf = append(codebuf, simpleOp(LOAD_INDEXED))
+		}
+
+	} else if addr.isVar() {
+		if addr.varname == "undefined" {
+			codebuf = append(codebuf, pushConstant(newConstant(newUndefined()))...)
+		} else {
+			rhsIdx := float64(appendStringtable(addr.varname))
+			codebuf = append(codebuf, newOpcode(LOAD, rhsIdx))
+		}
+	} else if addr.isConstant() {
+		codebuf = append(codebuf, pushConstant(addr)...)
+	} else {
+		log.Printf("No push for possible temporary %+v", addr)
+	}
+
 	return codebuf
 }
 
 func maybePushStore(result tac_address) []opcode {
 	codebuf := []opcode{}
-	if result.isVar() {
+	if result.isMember() {
+		codebuf = append(codebuf, pushVarOrConstant(newVar(result.varname))...)
+
+		if result.reference.isVar() {
+			memberIdx := appendStringtable(result.reference.varname)
+			codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(memberIdx)))
+		} else {
+			codebuf = append(codebuf, pushVarOrConstant(*result.reference)...)
+			codebuf = append(codebuf, simpleOp(STORE_INDEXED))
+		}
+	} else if result.isVar() {
 		varIdx := appendStringtable(result.varname)
 		codebuf = append(codebuf, newOpcode(STORE, float64(varIdx)))
 	}
@@ -286,6 +324,7 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 	for idx, op := range in {
 		switch op.op {
 		case TAC_PUSH_PARAM:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			paramCount++
 		case TAC_CALL:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
@@ -335,10 +374,6 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 		case TAC_LOAD:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, maybePushStore(op.result)...)
-		case TAC_LOAD_INDEXED_MEMBER:
-			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
-			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
-			codebuf = append(codebuf, simpleOp(LOAD_INDEXED))
 		case TAC_LABEL:
 			labels[op.arg1] = labelInfo{bytecodeOffset: len(codebuf)}
 		case TAC_ASSIGN:
@@ -575,76 +610,39 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 		}
 	case *parser.AssignmentExpression:
 		rhs := generateCodeTAC(n.Right, &codebuf)
-		retaddr = newVar(n.Left.(*parser.IdentifierLiteral).String())
-		codebuf = append(codebuf, tac{result: retaddr, arg1: rhs, op: TAC_ASSIGN})
-		/*
-			var realOp tac_op_type
-			switch n.Operator() {
-			case parser.ASSIGNMENT:
-				realOp = STORE
-			case parser.PLUS_EQ:
-				realOp = ADD
-			case parser.MINUS_EQ:
-				realOp = SUB
-			case parser.MULTIPLY_EQ:
-				realOp = MULTIPLY
-			case parser.DIVIDE_EQ:
-				realOp = DIVIDE
-			case parser.MODULUS_EQ:
-				realOp = MODULUS
-			case parser.LEFT_SHIFT_EQ:
-				realOp = LEFT_SHIFT
-			case parser.RIGHT_SHIFT_EQ:
-				realOp = RIGHT_SHIFT
-			case parser.UNSIGNED_RIGHT_SHIFT_EQ:
-				realOp = UNSIGNED_RIGHT_SHIFT
-			case parser.AND_EQ:
-				realOp = BITWISE_AND
-			case parser.XOR_EQ:
-				realOp = BITWISE_XOR
-			case parser.OR_EQ:
-				realOp = BITWISE_OR
-			default:
-				panic(fmt.Sprintf("unknown operator %s", n.Operator()))
-			}
 
-			if realOp != STORE {
-				// If it isn't a direct assignment, load the left hand side, perform
-				// the op.
-				switch lhs := n.Left.(type) {
-				case *parser.IdentifierLiteral:
-					varIdx := float64(appendStringtable(lhs.String()))
-					codebuf = append(codebuf, newOpcode(LOAD, varIdx))
-				case *parser.DotMemberExpression:
-					codebuf = append(codebuf, this.generateCode(lhs.X)...)
-					varIdx := appendStringtable(lhs.Name.String())
-					codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(varIdx)))
-				case *parser.BracketMemberExpression:
-					codebuf = append(codebuf, this.generateCode(lhs.X)...)
-					codebuf = append(codebuf, this.generateCode(lhs.Y)...)
-					codebuf = append(codebuf, simpleOp(LOAD_INDEXED))
-				default:
-					panic(fmt.Sprintf("unknown left hand side for assignment %T", n.Left))
-				}
-				codebuf = append(codebuf, simpleOp(realOp))
-			}
+		var realOp tac_op_type
+		switch n.Operator() {
+		case parser.ASSIGNMENT:
+			realOp = TAC_ASSIGN
+		case parser.PLUS_EQ:
+			realOp = TAC_ADD
+		case parser.MINUS_EQ:
+			realOp = TAC_SUB
+		case parser.MULTIPLY_EQ:
+			realOp = TAC_MULTIPLY
+		case parser.DIVIDE_EQ:
+			realOp = TAC_DIVIDE
+		case parser.MODULUS_EQ:
+			realOp = TAC_MODULUS
+		case parser.LEFT_SHIFT_EQ:
+			realOp = TAC_LEFT_SHIFT
+		case parser.RIGHT_SHIFT_EQ:
+			realOp = TAC_RIGHT_SHIFT
+		case parser.UNSIGNED_RIGHT_SHIFT_EQ:
+			realOp = TAC_UNSIGNED_RIGHT_SHIFT
+		case parser.AND_EQ:
+			realOp = TAC_BITWISE_AND
+		case parser.XOR_EQ:
+			realOp = TAC_BITWISE_XOR
+		case parser.OR_EQ:
+			realOp = TAC_BITWISE_OR
+		default:
+			panic(fmt.Sprintf("unknown operator %s", n.Operator()))
+		}
 
-			// Now store the result back to the left hand side.
-			switch lhs := n.Left.(type) {
-			case *parser.IdentifierLiteral:
-				varIdx := float64(appendStringtable(lhs.String()))
-				codebuf = append(codebuf, newOpcode(STORE, varIdx))
-			case *parser.DotMemberExpression:
-				codebuf = append(codebuf, this.generateCode(lhs.X)...)
-				varIdx := appendStringtable(lhs.Name.String())
-				codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(varIdx)))
-			case *parser.BracketMemberExpression:
-				codebuf = append(codebuf, this.generateCode(lhs.Y)...)
-				codebuf = append(codebuf, this.generateCode(lhs.X)...)
-				codebuf = append(codebuf, simpleOp(STORE_INDEXED))
-			default:
-				panic(fmt.Sprintf("unknown left hand side for assignment %T", n.Left))
-			}*/
+		retaddr = generateCodeTAC(n.Left, &codebuf)
+		codebuf = append(codebuf, tac{result: retaddr, arg1: rhs, op: realOp})
 	case *parser.BinaryExpression:
 		rightRef := generateCodeTAC(n.Right, &codebuf)
 		leftRef := generateCodeTAC(n.Left, &codebuf)
@@ -695,23 +693,17 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 		codebuf = append(codebuf, tac{result: retaddr, arg1: leftRef, op: realOp, arg2: rightRef})
 
 	case *parser.DotMemberExpression:
-		fid := generateCodeTAC(n.X, &codebuf)
-		base := newTemporary()
-		codebuf = append(codebuf, tac{result: base, op: TAC_LOAD, arg1: fid})
-
-		retaddr = newTemporary()
-		codebuf = append(codebuf, tac{result: retaddr, op: TAC_LOAD_MEMBER, arg1: base, arg2: newConstant(newString(n.Name.String()))})
+		base := generateCodeTAC(n.X, &codebuf)
+		if !base.isVar() {
+			panic("Not a var")
+		}
+		retaddr = newReference(base.varname, newVar(n.Name.String()))
 	case *parser.BracketMemberExpression:
-		fid := generateCodeTAC(n.X, &codebuf)
-		base := newTemporary()
-		codebuf = append(codebuf, tac{result: base, op: TAC_LOAD, arg1: fid})
-
-		rid := generateCodeTAC(n.Y, &codebuf)
-		idx := newTemporary()
-		codebuf = append(codebuf, tac{result: base, op: TAC_ASSIGN, arg1: rid})
-
-		retaddr = newTemporary()
-		codebuf = append(codebuf, tac{result: retaddr, op: TAC_LOAD_INDEXED_MEMBER, arg1: base, arg2: idx})
+		base := generateCodeTAC(n.X, &codebuf)
+		if !base.isVar() {
+			panic("Not a var")
+		}
+		retaddr = newReference(base.varname, generateCodeTAC(n.Y, &codebuf))
 
 	default:
 		panic(fmt.Sprintf("unknown node %T", node))

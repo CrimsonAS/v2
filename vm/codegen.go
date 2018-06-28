@@ -660,8 +660,8 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 				varIdx := appendStringtable(lhs.Name.String())
 				codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(varIdx)))
 			case *parser.BracketMemberExpression:
-				codebuf = append(codebuf, this.generateCode(lhs.X)...)
 				codebuf = append(codebuf, this.generateCode(lhs.Y)...)
+				codebuf = append(codebuf, this.generateCode(lhs.X)...)
 				codebuf = append(codebuf, simpleOp(LOAD_INDEXED))
 			default:
 				panic(fmt.Sprintf("unknown left hand side for assignment %T", n.Left))
@@ -735,8 +735,8 @@ func (this *vm) generateCodeForExpression(node parser.Node) []opcode {
 		varIdx := appendStringtable(n.Name.String())
 		codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(varIdx)))
 	case *parser.BracketMemberExpression:
-		codebuf = append(codebuf, this.generateCode(n.X)...)
 		codebuf = append(codebuf, this.generateCode(n.Y)...)
+		codebuf = append(codebuf, this.generateCode(n.X)...)
 		codebuf = append(codebuf, simpleOp(LOAD_INDEXED))
 	default:
 		panic(fmt.Sprintf("unknown expression %T", node))

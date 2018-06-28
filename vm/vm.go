@@ -138,10 +138,11 @@ func New(code string) *vm {
 	if NewCompiler {
 		il := []tac{}
 		generateCodeTAC(ast, &il)
+		optimizeTAC(&il)
 
-		//for idx, op := range il {
-		//	log.Printf("%d: %s", idx, op)
-		//}
+		for idx, op := range il {
+			log.Printf("%d: %s", idx, op)
+		}
 
 		vm.code = vm.generateBytecode(il)
 	} else {
@@ -413,8 +414,8 @@ func (this *vm) Run() value {
 			}
 			this.data_stack.push(vo.get(this, stringtable[op.opdata.asInt()]))
 		case LOAD_INDEXED:
-			idx := this.data_stack.pop().ToInteger()
 			v := this.data_stack.pop()
+			idx := this.data_stack.pop().ToInteger()
 			var vo valueObject
 			if v.hasPrimitiveBase() {
 				// Would be nice if we could do this at codegen time...

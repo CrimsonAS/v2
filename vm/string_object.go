@@ -73,19 +73,27 @@ func (this stringObject) String() string {
 // object methods
 //////////////////////////////////////
 
-func (this stringObject) defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool {
+func (this stringObject) defineOwnProperty(vm *vm, prop value, desc *propertyDescriptor, throw bool) bool {
 	return true
 }
 
-func (this stringObject) getOwnProperty(vm *vm, prop string) *propertyDescriptor {
+func (this stringObject) getOwnProperty(vm *vm, prop value) *propertyDescriptor {
 	return nil
 }
 
-func (this stringObject) put(vm *vm, prop string, v value, throw bool) {
+func (this stringObject) put(vm *vm, prop value, v value, throw bool) {
 
 }
 
-func (this stringObject) get(vm *vm, prop string) value {
+func (this stringObject) get(vm *vm, prop value) value {
+	// ### belongs in getOwnProperty perhaps?
+	if numIdx, ok := prop.(valueNumber); ok {
+		idx := numIdx.ToInteger()
+		if float64(idx) == float64(numIdx) && idx >= 0 && idx < len(this.primitiveData) {
+			return newString(string(this.primitiveData[idx]))
+		}
+	}
+
 	if this.valueBasicObject.getOwnProperty(vm, prop) != nil {
 		return this.valueBasicObject.get(vm, prop)
 	} else {

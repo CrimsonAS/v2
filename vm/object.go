@@ -32,15 +32,15 @@ import (
 
 func (this valueBasicObject) defineDefaultProperty(vm *vm, prop string, v value, lt int) bool {
 	pd := &propertyDescriptor{name: prop, length: lt, hasLength: true, enumerable: true, hasEnumerable: true, configurable: false, hasConfigurable: true, value: v, hasValue: true}
-	return this.defineOwnProperty(vm, prop, pd, true)
+	return this.defineOwnProperty(vm, newString(prop), pd, true)
 }
 
 func (this valueBasicObject) defineReadonlyProperty(vm *vm, prop string, v value, lt int) bool {
 	pd := &propertyDescriptor{name: prop, length: lt, hasLength: true, enumerable: true, hasEnumerable: true, configurable: false, hasConfigurable: true, value: v, hasValue: true}
-	return this.defineOwnProperty(vm, prop, pd, true)
+	return this.defineOwnProperty(vm, newString(prop), pd, true)
 }
 
-func (this valueBasicObject) canPut(vm *vm, prop string) bool {
+func (this valueBasicObject) canPut(vm *vm, prop value) bool {
 	desc := this.getOwnProperty(vm, prop)
 	if desc != nil {
 		if desc.isAccessorDescriptor() {
@@ -81,7 +81,7 @@ func (this valueBasicObject) canPut(vm *vm, prop string) bool {
 }
 
 // ### ArrayObject [[DefineOwnProperty]] 15.4.5.1
-func (this valueBasicObject) defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool {
+func (this valueBasicObject) defineOwnProperty(vm *vm, prop value, desc *propertyDescriptor, throw bool) bool {
 	if objectDebug {
 		log.Printf("Defining %s on %s %t", prop, this, this.odata.IsExtensible())
 	}
@@ -97,9 +97,9 @@ func (this valueBasicObject) defineOwnProperty(vm *vm, prop string, desc *proper
 
 		var pd *propertyDescriptor
 		if desc.isGenericDescriptor() || desc.isDataDescriptor() {
-			pd = &propertyDescriptor{name: prop, value: desc.value, hasValue: true, writable: desc.writable, hasWritable: true, enumerable: desc.enumerable, hasEnumerable: true, configurable: desc.configurable, hasConfigurable: true}
+			pd = &propertyDescriptor{name: prop.String(), value: desc.value, hasValue: true, writable: desc.writable, hasWritable: true, enumerable: desc.enumerable, hasEnumerable: true, configurable: desc.configurable, hasConfigurable: true}
 		} else {
-			pd = &propertyDescriptor{name: prop, get: desc.get, hasGet: true, set: desc.set, hasSet: true, enumerable: desc.enumerable, hasEnumerable: true, configurable: desc.configurable, hasConfigurable: true}
+			pd = &propertyDescriptor{name: prop.String(), get: desc.get, hasGet: true, set: desc.set, hasSet: true, enumerable: desc.enumerable, hasEnumerable: true, configurable: desc.configurable, hasConfigurable: true}
 		}
 		this.odata.(objectData).AppendProperty(pd)
 		//log.Printf("Added new property %s %+v", prop, pd)
@@ -205,7 +205,7 @@ func (this valueBasicObject) defineOwnProperty(vm *vm, prop string, desc *proper
 	return true
 }
 
-func (this valueBasicObject) put(vm *vm, prop string, v value, throw bool) {
+func (this valueBasicObject) put(vm *vm, prop value, v value, throw bool) {
 	if objectDebug {
 		log.Printf("Setting %s = %s on %s", prop, v, this)
 	}
@@ -232,7 +232,7 @@ func (this valueBasicObject) put(vm *vm, prop string, v value, throw bool) {
 	}
 }
 
-func (this valueBasicObject) get(vm *vm, prop string) value {
+func (this valueBasicObject) get(vm *vm, prop value) value {
 	desc := this.getProperty(vm, prop)
 	if desc == nil {
 		return newUndefined()
@@ -247,7 +247,7 @@ func (this valueBasicObject) get(vm *vm, prop string) value {
 	panic("unreachable")
 }
 
-func (this valueBasicObject) getOwnProperty(vm *vm, prop string) *propertyDescriptor {
+func (this valueBasicObject) getOwnProperty(vm *vm, prop value) *propertyDescriptor {
 	props := this.odata.(objectData).Properties()
 	if objectDebug {
 		log.Printf("GetOwnProperty %T.%s %d props", this, prop, len(props))
@@ -256,7 +256,7 @@ func (this valueBasicObject) getOwnProperty(vm *vm, prop string) *propertyDescri
 		if objectDebug {
 			log.Printf("Looking for %s found %s", prop, props[idx].name)
 		}
-		if props[idx].name == prop {
+		if props[idx].name == prop.String() {
 			return props[idx]
 		}
 	}
@@ -264,7 +264,7 @@ func (this valueBasicObject) getOwnProperty(vm *vm, prop string) *propertyDescri
 	return nil
 }
 
-func (this valueBasicObject) getProperty(vm *vm, prop string) *propertyDescriptor {
+func (this valueBasicObject) getProperty(vm *vm, prop value) *propertyDescriptor {
 	pd := this.getOwnProperty(vm, prop)
 	if pd != nil {
 		return pd
@@ -279,8 +279,8 @@ func (this valueBasicObject) getProperty(vm *vm, prop string) *propertyDescripto
 }
 
 type foFn func(vm *vm, f value, args []value) value
-type getFn func(vm *vm, f value, prop string, pd *propertyDescriptor) value
-type setFn func(vm *vm, f value, prop string, pd *propertyDescriptor, v value) value
+type getFn func(vm *vm, f value, prop value, pd *propertyDescriptor) value
+type setFn func(vm *vm, f value, prop value, pd *propertyDescriptor, v value) value
 
 type propertyDescriptor struct {
 	name         string
@@ -322,10 +322,10 @@ func (this *propertyDescriptor) isAccessorDescriptor() bool {
 type valueObject interface {
 	value
 	objectData() objectData
-	defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool
-	getOwnProperty(vm *vm, prop string) *propertyDescriptor
-	put(vm *vm, prop string, v value, throw bool)
-	get(vm *vm, prop string) value
+	defineOwnProperty(vm *vm, prop value, desc *propertyDescriptor, throw bool) bool
+	getOwnProperty(vm *vm, prop value) *propertyDescriptor
+	put(vm *vm, prop value, v value, throw bool)
+	get(vm *vm, prop value) value
 }
 
 type valueBasicObject struct {

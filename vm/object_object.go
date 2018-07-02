@@ -126,7 +126,7 @@ func object_prototype_hasOwnProperty(vm *vm, f value, args []value) value {
 	P := args[0].ToString()
 	O := f.ToObject()
 
-	pd := O.getOwnProperty(vm, P.String())
+	pd := O.getOwnProperty(vm, newString(P.String()))
 	if pd == nil {
 		return newBool(false)
 	} else {
@@ -143,14 +143,14 @@ func object_ctor_getPrototypeOf(vm *vm, f value, args []value) value {
 	}
 }
 
-func object_get(vm *vm, f value, prop string, pd *propertyDescriptor) value {
+func object_get(vm *vm, f value, prop value, pd *propertyDescriptor) value {
 	if objectDebug {
 		log.Printf("object_get %s %+v", prop, pd)
 	}
 	return pd.value
 }
 
-func object_set(vm *vm, f value, prop string, pd *propertyDescriptor, v value) value {
+func object_set(vm *vm, f value, prop value, pd *propertyDescriptor, v value) value {
 	if objectDebug {
 		log.Printf("object_set %s", prop)
 	}

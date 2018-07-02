@@ -132,6 +132,34 @@ func TestStringObject(t *testing.T) {
 			in:  `var s = new String("    ab  cd    "); return s.trim()`,
 			out: newString("ab  cd"),
 		},
+		simpleVMTest{
+			in:  `var s = new String("hello"); return s[-1]`,
+			out: newUndefined(),
+		},
+		simpleVMTest{
+			in:  `var s = new String("hello"); return s[0]`,
+			out: newString("h"),
+		},
+		simpleVMTest{
+			in:  `var s = new String("hello"); return s[1]`,
+			out: newString("e"),
+		},
+		simpleVMTest{
+			in:  `var s = new String("hello"); return s[2]`,
+			out: newString("l"),
+		},
+		simpleVMTest{
+			in:  `var s = new String("hello"); return s[3]`,
+			out: newString("l"),
+		},
+		simpleVMTest{
+			in:  `var s = new String("hello"); return s[4]`,
+			out: newString("o"),
+		},
+		simpleVMTest{
+			in:  `var s = new String("hello"); return s[5]`,
+			out: newUndefined(),
+		},
 	}
 
 	runSimpleVMTestHelper(t, tests)

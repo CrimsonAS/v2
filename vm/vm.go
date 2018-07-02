@@ -31,7 +31,6 @@ import (
 	"github.com/CrimsonAS/v2/parser"
 	"log"
 	"math"
-	"strconv"
 )
 
 type stackFrame struct {
@@ -235,8 +234,9 @@ func (this *vm) Run() value {
 			val := this.data_stack.pop()
 			key := this.data_stack.pop()
 			obj := this.data_stack.peek().(valueBasicObject)
-			pd := &propertyDescriptor{name: key.String(), value: val, hasValue: true, writable: true, hasWritable: true, configurable: true, hasConfigurable: true}
-			obj.defineOwnProperty(this, pd.name, pd, false)
+			pn := key.ToString()
+			pd := &propertyDescriptor{name: pn.String(), value: val, hasValue: true, writable: true, hasWritable: true, configurable: true, hasConfigurable: true}
+			obj.defineOwnProperty(this, pn, pd, false)
 		case END_OBJECT:
 			this.data_stack.pop()
 		case PUSH_UNDEFINED:
@@ -406,7 +406,7 @@ func (this *vm) Run() value {
 			} else {
 				vo = v.(valueObject)
 			}
-			vo.put(this, stringtable[op.opdata.asInt()], nv, true)
+			vo.put(this, newString(stringtable[op.opdata.asInt()]), nv, true)
 		case LOAD_MEMBER:
 			v := this.data_stack.pop()
 			var vo valueObject
@@ -416,7 +416,7 @@ func (this *vm) Run() value {
 			} else {
 				vo = v.(valueBasicObject)
 			}
-			this.data_stack.push(vo.get(this, stringtable[op.opdata.asInt()]))
+			this.data_stack.push(vo.get(this, newString(stringtable[op.opdata.asInt()])))
 		case LOAD_INDEXED:
 			v := this.data_stack.pop()
 			idx := this.data_stack.pop().ToInteger()
@@ -425,16 +425,13 @@ func (this *vm) Run() value {
 				// Would be nice if we could do this at codegen time...
 				vo = v.ToObject()
 			} else {
-				vo = v.(valueBasicObject)
+				vo = v.(valueObject)
 			}
 
 			if ao, ok := vo.objectData().(*arrayObjectData); ok {
 				this.data_stack.push(ao.primitiveData.(valueArrayData).Get(idx))
 			} else {
-				// Fall back to string properties. Not ideal!
-				sidx := strconv.Itoa(idx)
-				this.data_stack.push(vo.get(this, sidx))
-
+				this.data_stack.push(vo.get(this, newNumber(float64(idx))))
 			}
 		case STORE_INDEXED:
 			v := this.data_stack.pop()
@@ -444,16 +441,14 @@ func (this *vm) Run() value {
 				// Would be nice if we could do this at codegen time...
 				vo = v.ToObject()
 			} else {
-				vo = v.(valueBasicObject)
+				vo = v.(valueObject)
 			}
 
 			nv := this.data_stack.pop()
 			if ao, ok := vo.objectData().(*arrayObjectData); ok {
 				ao.primitiveData.(valueArrayData).Set(idx, nv)
 			} else {
-				// Fall back to string properties. Not ideal!
-				sidx := strconv.Itoa(idx)
-				vo.put(this, sidx, nv, true)
+				vo.put(this, newNumber(float64(idx)), nv, true)
 			}
 		case LOAD:
 			sv, ok := this.findVar(op.opdata.asInt())

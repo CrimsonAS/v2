@@ -270,9 +270,6 @@ func (this valueBasicObject) ToBoolean() bool {
 }
 
 func (this valueBasicObject) ToString() valueString {
-	if sd, ok := this.odata.(*stringObjectData); ok {
-		return sd.primitiveData.ToString()
-	}
 	return "[object]"
 }
 

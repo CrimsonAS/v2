@@ -261,7 +261,6 @@ func (this valueBasicObject) getOwnProperty(vm *vm, prop string) *propertyDescri
 		}
 	}
 
-	// ### STRING_OBJECT GetOwnProperty (es5 15.5.5.2)
 	return nil
 }
 

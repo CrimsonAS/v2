@@ -32,17 +32,75 @@ import (
 	"strings"
 )
 
-type stringObjectData struct {
-	*valueBasicObjectData
+type stringObject struct {
+	valueBasicObject
 	primitiveData valueString
 }
 
-func (this *stringObjectData) Prototype() *valueBasicObject {
+//////////////////////////////////////
+// value methods
+//////////////////////////////////////
+
+func (this stringObject) ToInteger() int {
+	return int(this.ToNumber())
+}
+
+func (this stringObject) ToNumber() float64 {
+	panic("object conversion not implemented")
+}
+
+func (this stringObject) ToBoolean() bool {
+	return true
+}
+
+func (this stringObject) ToString() valueString {
+	return this.primitiveData
+}
+
+func (this stringObject) ToObject() valueObject {
+	return this
+}
+
+func (this stringObject) hasPrimitiveBase() bool {
+	return true
+}
+
+func (this stringObject) String() string {
+	return string(this.primitiveData)
+}
+
+//////////////////////////////////////
+// object methods
+//////////////////////////////////////
+
+func (this stringObject) defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool {
+	return true
+}
+
+func (this stringObject) getOwnProperty(vm *vm, prop string) *propertyDescriptor {
+	return nil
+}
+
+func (this stringObject) put(vm *vm, prop string, v value, throw bool) {
+
+}
+
+func (this stringObject) get(vm *vm, prop string) value {
+	if this.valueBasicObject.getOwnProperty(vm, prop) != nil {
+		return this.valueBasicObject.get(vm, prop)
+	} else {
+		return stringProto.get(vm, prop)
+	}
+}
+
+//////////////////////////////////////
+
+func (this *stringObject) Prototype() *valueBasicObject {
 	return &stringProto
 }
 
-func newStringObject(s string) valueBasicObject {
-	return valueBasicObject{&stringObjectData{&valueBasicObjectData{}, newString(s)}}
+func newStringObject(s string) valueObject {
+	return stringObject{valueBasicObject: newBasicObject(), primitiveData: newString(s)}
 }
 
 var stringProto valueBasicObject
@@ -88,10 +146,8 @@ func string_prototype_toString(vm *vm, f value, args []value) value {
 	switch o := f.(type) {
 	case valueString:
 		return newString(f.ToString().String())
-	case valueBasicObject:
-		if sd, ok := o.odata.(*stringObjectData); ok {
-			return newString(sd.primitiveData.ToString().String())
-		}
+	case stringObject:
+		return newString(o.primitiveData.ToString().String())
 	default:
 		panic(fmt.Sprintf("Not a string! %s", f)) // ### throw
 	}
@@ -102,10 +158,8 @@ func string_prototype_valueOf(vm *vm, f value, args []value) value {
 	switch o := f.(type) {
 	case valueString:
 		return newString(f.ToString().String())
-	case valueBasicObject:
-		if sd, ok := o.odata.(*stringObjectData); ok {
-			return newString(sd.primitiveData.ToString().String())
-		}
+	case stringObject:
+		return newString(o.primitiveData.ToString().String())
 	default:
 		panic(fmt.Sprintf("Not a string! %s", f)) // ### throw
 	}

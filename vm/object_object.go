@@ -97,6 +97,10 @@ func object_prototype_toString(vm *vm, f value, args []value) value {
 		return newString("[object Undefined]")
 	case valueNull:
 		return newString("[object Null]")
+	case valueString:
+		return newString("[object String]")
+	case stringObject:
+		return newString("[object String]")
 	}
 
 	o := f.ToObject()
@@ -107,8 +111,6 @@ func object_prototype_toString(vm *vm, f value, args []value) value {
 		return newString("[object Boolean]")
 	case *numberObjectData:
 		return newString("[object Number]")
-	case *stringObjectData:
-		return newString("[object String]")
 	case *functionObjectData:
 		return newString("[object Function]")
 	}

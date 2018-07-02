@@ -131,8 +131,6 @@ func makeStackFrame(thisArg value, returnAddr int, outer *stackFrame) stackFrame
 	return stackFrame{retAddr: returnAddr, outer: outer, thisArg: thisArg}
 }
 
-var NewCompiler = false
-
 func New(code string) *vm {
 	ast := parser.Parse(code, true /* ignore comments */)
 
@@ -140,24 +138,20 @@ func New(code string) *vm {
 	vm.stack = []stackFrame{makeStackFrame(newUndefined(), 0, nil)}
 	vm.currentFrame = &vm.stack[0]
 
-	if NewCompiler {
-		il := []tac{}
-		vm.generateCodeTAC(ast, &il)
-		optimizeTAC(&il)
+	il := []tac{}
+	vm.generateCodeTAC(ast, &il)
+	optimizeTAC(&il)
 
-		if execDebug {
-			for idx, op := range il {
-				log.Printf("%d: %s", idx, op)
-			}
+	if execDebug {
+		for idx, op := range il {
+			log.Printf("%d: %s", idx, op)
 		}
+	}
 
-		vm.code = vm.generateBytecode(il)
+	vm.code = vm.generateBytecode(il)
 
-		if execDebug {
-			vm.DumpCode()
-		}
-	} else {
-		vm.code = vm.generateCode(ast)
+	if execDebug {
+		vm.DumpCode()
 	}
 
 	vm.defineVar(appendStringtable("Object"), defineObjectCtor(&vm))

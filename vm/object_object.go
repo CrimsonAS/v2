@@ -63,7 +63,7 @@ func defineObjectCtor(vm *vm) value {
 
 	objectCtor := newFunctionObject(object_call, object_ctor)
 	objectCtor.defineDefaultProperty(vm, "getPrototypeOf", newFunctionObject(object_ctor_getPrototypeOf, nil), 0)
-	objectCtor.odata.(*functionObjectData).prototype = &objectProto
+	objectCtor.prototype = &objectProto
 
 	return objectCtor
 }
@@ -99,20 +99,24 @@ func object_prototype_toString(vm *vm, f value, args []value) value {
 		return newString("[object Null]")
 	case valueString:
 		return newString("[object String]")
-	case stringObject:
-		return newString("[object String]")
+	case valueNumber:
+		return newString("[object Number]")
 	}
 
 	o := f.ToObject()
+	switch o.(type) {
+	case stringObject:
+		return newString("[object String]")
+	case functionObject:
+		return newString("[object Function]")
+	case numberObject:
+		return newString("[object Number]")
+	}
 	switch o.objectData().(type) {
 	case *basicObjectData:
 		return newString("[object Object]")
 	case *booleanObjectData:
 		return newString("[object Boolean]")
-	case *numberObjectData:
-		return newString("[object Number]")
-	case *functionObjectData:
-		return newString("[object Function]")
 	}
 	panic(fmt.Sprintf("%T is an unknown object type", o.objectData()))
 }

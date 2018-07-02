@@ -127,7 +127,7 @@ func defineStringCtor(vm *vm) value {
 	stringProto.defineDefaultProperty(vm, "trim", newFunctionObject(string_prototype_trim, nil), 0)
 
 	stringO := newFunctionObject(string_call, string_ctor)
-	stringO.odata.(*functionObjectData).prototype = &stringProto
+	stringO.prototype = &stringProto
 
 	stringProto.defineDefaultProperty(vm, "constructor", stringO, 0)
 

@@ -45,13 +45,13 @@ func newBooleanObject(b bool) valueBasicObject {
 	return valueBasicObject{&booleanObjectData{&valueBasicObjectData{extensible: true}, b}}
 }
 
-func defineBooleanCtor(vm *vm) valueBasicObject {
+func defineBooleanCtor(vm *vm) functionObject {
 	booleanProto = valueBasicObject{&rootObjectData{&valueBasicObjectData{extensible: true}}}
 	booleanProto.defineDefaultProperty(vm, "toString", newFunctionObject(boolean_prototype_toString, nil), 0)
 	booleanProto.defineDefaultProperty(vm, "valueOf", newFunctionObject(boolean_prototype_valueOf, nil), 0)
 
 	boolO := newFunctionObject(boolean_call, boolean_ctor)
-	boolO.odata.(*functionObjectData).prototype = &booleanProto
+	boolO.prototype = &booleanProto
 
 	booleanProto.defineDefaultProperty(vm, "constructor", boolO, 0)
 	return boolO

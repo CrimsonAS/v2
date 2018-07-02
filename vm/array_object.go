@@ -26,18 +26,147 @@
 
 package vm
 
-type arrayObjectData struct {
-	*valueBasicObjectData
-	primitiveData value
+import (
+	"fmt"
+)
+
+type arrayObject struct {
+	valueBasicObject
+	primitiveData valueArrayData
 }
 
-func (this *arrayObjectData) Prototype() *valueBasicObject {
+func (this *arrayObject) Prototype() *valueBasicObject {
 	return &arrayProto
 }
 
-func newArrayObject(s []value) valueBasicObject {
-	v := valueBasicObject{&arrayObjectData{&valueBasicObjectData{extensible: true}, newArrayData(s)}}
-	return v
+//////////////////////////////////////
+// value methods
+//////////////////////////////////////
+
+func (this arrayObject) ToInteger() int {
+	return int(this.ToNumber())
+}
+
+func (this arrayObject) ToNumber() float64 {
+	panic("object conversion not implemented")
+}
+
+func (this arrayObject) ToBoolean() bool {
+	return true
+}
+
+func (this arrayObject) ToString() valueString {
+	return this.primitiveData.ToString()
+}
+
+func (this arrayObject) ToObject() valueObject {
+	return this
+}
+
+func (this arrayObject) hasPrimitiveBase() bool {
+	return true
+}
+
+func (this arrayObject) String() string {
+	return string(this.primitiveData.ToString())
+}
+
+//////////////////////////////////////
+// object methods
+//////////////////////////////////////
+
+func (this arrayObject) defineOwnProperty(vm *vm, prop value, desc *propertyDescriptor, throw bool) bool {
+	return true
+}
+
+func (this arrayObject) getOwnProperty(vm *vm, prop value) *propertyDescriptor {
+	return nil
+}
+
+func (this arrayObject) put(vm *vm, prop value, v value, throw bool) {
+	if numIdx, ok := prop.(valueNumber); ok {
+		idx := numIdx.ToInteger()
+		if float64(idx) == float64(numIdx) {
+			this.primitiveData.Set(idx, v)
+		}
+	}
+
+	this.valueBasicObject.put(vm, prop, v, throw)
+}
+
+func (this arrayObject) get(vm *vm, prop value) value {
+	// ### belongs in getOwnProperty perhaps?
+	if numIdx, ok := prop.(valueNumber); ok {
+		idx := numIdx.ToInteger()
+		if float64(idx) == float64(numIdx) && idx >= 0 && idx < len(this.primitiveData.values) {
+			return this.primitiveData.values[idx]
+		}
+	}
+
+	if this.valueBasicObject.getOwnProperty(vm, prop) != nil {
+		return this.valueBasicObject.get(vm, prop)
+	} else {
+		return stringProto.get(vm, prop)
+	}
+}
+
+//////////////////////////////////////
+// array data
+//////////////////////////////////////
+
+// Copying is necessary, otherwise we'll end up with stack data, which is bad
+func newArrayData(v []value) valueArrayData {
+	ad := valueArrayData{values: make([]value, len(v))}
+	for idx, _ := range v {
+		ad.values[idx] = v[idx]
+	}
+	return ad
+}
+
+func (this valueArrayData) Get(idx int) value {
+	return this.values[idx]
+}
+
+func (this valueArrayData) Set(idx int, v value) {
+	this.values[idx] = v
+}
+
+type valueArrayData struct {
+	values []value
+}
+
+func (this valueArrayData) ToInteger() int {
+	panic("Should never happen")
+}
+
+func (this valueArrayData) ToNumber() float64 {
+	panic("Should never happen")
+}
+
+func (this valueArrayData) ToBoolean() bool {
+	panic("Should never happen")
+}
+
+func (this valueArrayData) ToString() valueString {
+	return newString(fmt.Sprintf("ARRAY[%s]", this.values))
+}
+
+func (this valueArrayData) ToObject() valueObject {
+	panic("Should never happen")
+}
+
+func (this valueArrayData) hasPrimitiveBase() bool {
+	panic("Should never happen")
+}
+
+func (this valueArrayData) String() string {
+	return this.ToString().String()
+}
+
+//////////////////////////////////////
+
+func newArrayObject(s []value) valueObject {
+	return arrayObject{valueBasicObject: newBasicObject(), primitiveData: newArrayData(s)}
 }
 
 var arrayProto valueBasicObject

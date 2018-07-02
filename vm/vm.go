@@ -233,7 +233,7 @@ func (this *vm) Run() value {
 		case DEFINE_PROPERTY:
 			val := this.data_stack.pop()
 			key := this.data_stack.pop()
-			obj := this.data_stack.peek().(valueBasicObject)
+			obj := this.data_stack.peek().(valueObject)
 			pn := key.ToString()
 			pd := &propertyDescriptor{name: pn.String(), value: val, hasValue: true, writable: true, hasWritable: true, configurable: true, hasConfigurable: true}
 			obj.defineOwnProperty(this, pn, pd, false)
@@ -414,7 +414,7 @@ func (this *vm) Run() value {
 				// Would be nice if we could do this at codegen time...
 				vo = v.ToObject()
 			} else {
-				vo = v.(valueBasicObject)
+				vo = v.(valueObject)
 			}
 			this.data_stack.push(vo.get(this, newString(stringtable[op.opdata.asInt()])))
 		case LOAD_INDEXED:
@@ -428,11 +428,7 @@ func (this *vm) Run() value {
 				vo = v.(valueObject)
 			}
 
-			if ao, ok := vo.objectData().(*arrayObjectData); ok {
-				this.data_stack.push(ao.primitiveData.(valueArrayData).Get(idx))
-			} else {
-				this.data_stack.push(vo.get(this, newNumber(float64(idx))))
-			}
+			this.data_stack.push(vo.get(this, newNumber(float64(idx))))
 		case STORE_INDEXED:
 			v := this.data_stack.pop()
 			idx := this.data_stack.pop().ToInteger()
@@ -445,11 +441,7 @@ func (this *vm) Run() value {
 			}
 
 			nv := this.data_stack.pop()
-			if ao, ok := vo.objectData().(*arrayObjectData); ok {
-				ao.primitiveData.(valueArrayData).Set(idx, nv)
-			} else {
-				vo.put(this, newNumber(float64(idx)), nv, true)
-			}
+			vo.put(this, newNumber(float64(idx)), nv, true)
 		case LOAD:
 			sv, ok := this.findVar(op.opdata.asInt())
 			if !ok {
@@ -480,7 +472,7 @@ func (this *vm) Run() value {
 			v := this.data_stack.pop()
 
 			// ### does the value interface need another member?
-			switch n := v.(type) {
+			switch v.(type) {
 			case valueUndefined:
 				this.data_stack.push(newString("undefined"))
 			case valueNull:
@@ -491,13 +483,14 @@ func (this *vm) Run() value {
 				this.data_stack.push(newString("number"))
 			case valueString:
 				this.data_stack.push(newString("string"))
+			case functionObject:
+				this.data_stack.push(newString("function"))
 			case valueBasicObject:
-				switch n.odata.(type) {
-				case *functionObjectData:
-					this.data_stack.push(newString("function"))
-				default:
-					this.data_stack.push(newString("object"))
-				}
+				this.data_stack.push(newString("object"))
+			case arrayObject:
+				this.data_stack.push(newString("object"))
+			default:
+				panic("Unknown type")
 			}
 		default:
 			panic(fmt.Sprintf("unhandled opcode %+v", op))
@@ -518,7 +511,7 @@ func (this *vm) handleCall(op opcode, isNew bool) {
 		builtinArgs = builtinArgs[:0]
 	}
 
-	fo := fn.(valueBasicObject)
+	fo := fn.(functionObject)
 
 	sf := makeStackFrame(this.lastLoadedVar, this.ip, this.currentFrame)
 	this.pushStack(sf)

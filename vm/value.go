@@ -286,57 +286,6 @@ func (this valueBasicObject) String() string {
 }
 
 //////////////////////////////////////
-
-// Copying is necessary, otherwise we'll end up with stack data, which is bad
-func newArrayData(v []value) valueArrayData {
-	ad := valueArrayData{values: make([]value, len(v))}
-	for idx, _ := range v {
-		ad.values[idx] = v[idx]
-	}
-	return ad
-}
-
-func (this valueArrayData) Get(idx int) value {
-	return this.values[idx]
-}
-
-func (this valueArrayData) Set(idx int, v value) {
-	this.values[idx] = v
-}
-
-type valueArrayData struct {
-	values []value
-}
-
-func (this valueArrayData) ToInteger() int {
-	panic("Should never happen")
-}
-
-func (this valueArrayData) ToNumber() float64 {
-	panic("Should never happen")
-}
-
-func (this valueArrayData) ToBoolean() bool {
-	panic("Should never happen")
-}
-
-func (this valueArrayData) ToString() valueString {
-	return newString(fmt.Sprintf("ARRAY[%s]", this.values))
-}
-
-func (this valueArrayData) ToObject() valueObject {
-	panic("Should never happen")
-}
-
-func (this valueArrayData) hasPrimitiveBase() bool {
-	panic("Should never happen")
-}
-
-func (this valueArrayData) String() string {
-	return this.ToString().String()
-}
-
-//////////////////////////////////////
 //////////////////////////////////////
 
 func checkObjectCoercible(vm *vm, v value) {

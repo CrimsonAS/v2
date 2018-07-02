@@ -1,15 +1,15 @@
 package vm
 
 type numberObjectData struct {
-	*valueObjectData
+	*valueBasicObjectData
 	primitiveData value
 }
 
-func (this *numberObjectData) Prototype() *valueObject {
+func (this *numberObjectData) Prototype() *valueBasicObject {
 	return nil
 }
 
-func newNumberObject(n float64) valueObject {
-	v := valueObject{&numberObjectData{&valueObjectData{extensible: true}, newNumber(n)}}
+func newNumberObject(n float64) valueBasicObject {
+	v := valueBasicObject{&numberObjectData{&valueBasicObjectData{extensible: true}, newNumber(n)}}
 	return v
 }

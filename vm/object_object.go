@@ -32,31 +32,31 @@ import (
 )
 
 type rootObjectData struct {
-	*valueObjectData
+	*valueBasicObjectData
 }
 
-func (this *rootObjectData) Prototype() *valueObject {
+func (this *rootObjectData) Prototype() *valueBasicObject {
 	return nil
 }
 
 type basicObjectData struct {
-	*valueObjectData
+	*valueBasicObjectData
 }
 
-func (this *basicObjectData) Prototype() *valueObject {
+func (this *basicObjectData) Prototype() *valueBasicObject {
 	return &objectProto
 }
 
-var objectProto valueObject
+var objectProto valueBasicObject
 
 // Keep in mind that this is not just used by this file.
-func newBasicObject() valueObject {
-	v := valueObject{&basicObjectData{&valueObjectData{extensible: true}}}
+func newBasicObject() valueBasicObject {
+	v := valueBasicObject{&basicObjectData{&valueBasicObjectData{extensible: true}}}
 	return v
 }
 
 func defineObjectCtor(vm *vm) value {
-	objectProto = valueObject{&rootObjectData{&valueObjectData{extensible: true}}}
+	objectProto = valueBasicObject{&rootObjectData{&valueBasicObjectData{extensible: true}}}
 	objectProto.defineDefaultProperty(vm, "toString", newFunctionObject(object_prototype_toString, nil), 0)
 	objectProto.defineDefaultProperty(vm, "valueOf", newFunctionObject(object_prototype_valueOf, nil), 0)
 	objectProto.defineDefaultProperty(vm, "hasOwnProperty", newFunctionObject(object_prototype_hasOwnProperty, nil), 0)
@@ -76,7 +76,7 @@ func object_ctor(vm *vm, f value, args []value) value {
 	if len(args) > 0 {
 		v := args[0]
 		switch v.(type) {
-		case valueObject:
+		case valueBasicObject:
 			return v
 		case valueString:
 			return v.ToObject()
@@ -100,7 +100,7 @@ func object_prototype_toString(vm *vm, f value, args []value) value {
 	}
 
 	o := f.ToObject()
-	switch o.odata.(type) {
+	switch o.objectData().(type) {
 	case *basicObjectData:
 		return newString("[object Object]")
 	case *booleanObjectData:
@@ -112,7 +112,7 @@ func object_prototype_toString(vm *vm, f value, args []value) value {
 	case *functionObjectData:
 		return newString("[object Function]")
 	}
-	panic(fmt.Sprintf("%T is an unknown object type", o.odata))
+	panic(fmt.Sprintf("%T is an unknown object type", o.objectData()))
 }
 
 func object_prototype_valueOf(vm *vm, f value, args []value) value {
@@ -134,7 +134,7 @@ func object_prototype_hasOwnProperty(vm *vm, f value, args []value) value {
 
 func object_ctor_getPrototypeOf(vm *vm, f value, args []value) value {
 	switch o := f.(type) {
-	case valueObject:
+	case valueBasicObject:
 		return o.odata.Prototype()
 	default:
 		return vm.ThrowTypeError("")

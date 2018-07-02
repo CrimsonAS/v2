@@ -234,7 +234,7 @@ func (this *vm) Run() value {
 		case DEFINE_PROPERTY:
 			val := this.data_stack.pop()
 			key := this.data_stack.pop()
-			obj := this.data_stack.peek().(valueObject)
+			obj := this.data_stack.peek().(valueBasicObject)
 			pd := &propertyDescriptor{name: key.String(), value: val, hasValue: true, writable: true, hasWritable: true, configurable: true, hasConfigurable: true}
 			obj.defineOwnProperty(this, pd.name, pd, false)
 		case END_OBJECT:
@@ -414,7 +414,7 @@ func (this *vm) Run() value {
 				// Would be nice if we could do this at codegen time...
 				vo = v.ToObject()
 			} else {
-				vo = v.(valueObject)
+				vo = v.(valueBasicObject)
 			}
 			this.data_stack.push(vo.get(this, stringtable[op.opdata.asInt()]))
 		case LOAD_INDEXED:
@@ -425,10 +425,10 @@ func (this *vm) Run() value {
 				// Would be nice if we could do this at codegen time...
 				vo = v.ToObject()
 			} else {
-				vo = v.(valueObject)
+				vo = v.(valueBasicObject)
 			}
 
-			if ao, ok := vo.odata.(*arrayObjectData); ok {
+			if ao, ok := vo.objectData().(*arrayObjectData); ok {
 				this.data_stack.push(ao.primitiveData.(valueArrayData).Get(idx))
 			} else {
 				// Fall back to string properties. Not ideal!
@@ -444,11 +444,11 @@ func (this *vm) Run() value {
 				// Would be nice if we could do this at codegen time...
 				vo = v.ToObject()
 			} else {
-				vo = v.(valueObject)
+				vo = v.(valueBasicObject)
 			}
 
 			nv := this.data_stack.pop()
-			if ao, ok := vo.odata.(*arrayObjectData); ok {
+			if ao, ok := vo.objectData().(*arrayObjectData); ok {
 				ao.primitiveData.(valueArrayData).Set(idx, nv)
 			} else {
 				// Fall back to string properties. Not ideal!
@@ -496,7 +496,7 @@ func (this *vm) Run() value {
 				this.data_stack.push(newString("number"))
 			case valueString:
 				this.data_stack.push(newString("string"))
-			case valueObject:
+			case valueBasicObject:
 				switch n.odata.(type) {
 				case *functionObjectData:
 					this.data_stack.push(newString("function"))
@@ -523,7 +523,7 @@ func (this *vm) handleCall(op opcode, isNew bool) {
 		builtinArgs = builtinArgs[:0]
 	}
 
-	fo := fn.(valueObject)
+	fo := fn.(valueBasicObject)
 
 	sf := makeStackFrame(this.lastLoadedVar, this.ip, this.currentFrame)
 	this.pushStack(sf)

@@ -33,22 +33,22 @@ import (
 )
 
 type stringObjectData struct {
-	*valueObjectData
+	*valueBasicObjectData
 	primitiveData valueString
 }
 
-func (this *stringObjectData) Prototype() *valueObject {
+func (this *stringObjectData) Prototype() *valueBasicObject {
 	return &stringProto
 }
 
-func newStringObject(s string) valueObject {
-	return valueObject{&stringObjectData{&valueObjectData{}, newString(s)}}
+func newStringObject(s string) valueBasicObject {
+	return valueBasicObject{&stringObjectData{&valueBasicObjectData{}, newString(s)}}
 }
 
-var stringProto valueObject
+var stringProto valueBasicObject
 
 func defineStringCtor(vm *vm) value {
-	stringProto = valueObject{&rootObjectData{&valueObjectData{extensible: true}}}
+	stringProto = valueBasicObject{&rootObjectData{&valueBasicObjectData{extensible: true}}}
 	stringProto.defineDefaultProperty(vm, "toString", newFunctionObject(string_prototype_toString, nil), 0)
 	stringProto.defineDefaultProperty(vm, "valueOf", newFunctionObject(string_prototype_valueOf, nil), 0)
 	stringProto.defineDefaultProperty(vm, "charAt", newFunctionObject(string_prototype_charAt, nil), 1)
@@ -88,7 +88,7 @@ func string_prototype_toString(vm *vm, f value, args []value) value {
 	switch o := f.(type) {
 	case valueString:
 		return newString(f.ToString().String())
-	case valueObject:
+	case valueBasicObject:
 		if sd, ok := o.odata.(*stringObjectData); ok {
 			return newString(sd.primitiveData.ToString().String())
 		}
@@ -102,7 +102,7 @@ func string_prototype_valueOf(vm *vm, f value, args []value) value {
 	switch o := f.(type) {
 	case valueString:
 		return newString(f.ToString().String())
-	case valueObject:
+	case valueBasicObject:
 		if sd, ok := o.odata.(*stringObjectData); ok {
 			return newString(sd.primitiveData.ToString().String())
 		}

@@ -30,17 +30,17 @@ import (
 	"log"
 )
 
-func (this valueObject) defineDefaultProperty(vm *vm, prop string, v value, lt int) bool {
+func (this valueBasicObject) defineDefaultProperty(vm *vm, prop string, v value, lt int) bool {
 	pd := &propertyDescriptor{name: prop, length: lt, hasLength: true, enumerable: true, hasEnumerable: true, configurable: false, hasConfigurable: true, value: v, hasValue: true}
 	return this.defineOwnProperty(vm, prop, pd, true)
 }
 
-func (this valueObject) defineReadonlyProperty(vm *vm, prop string, v value, lt int) bool {
+func (this valueBasicObject) defineReadonlyProperty(vm *vm, prop string, v value, lt int) bool {
 	pd := &propertyDescriptor{name: prop, length: lt, hasLength: true, enumerable: true, hasEnumerable: true, configurable: false, hasConfigurable: true, value: v, hasValue: true}
 	return this.defineOwnProperty(vm, prop, pd, true)
 }
 
-func (this valueObject) canPut(vm *vm, prop string) bool {
+func (this valueBasicObject) canPut(vm *vm, prop string) bool {
 	desc := this.getOwnProperty(vm, prop)
 	if desc != nil {
 		if desc.isAccessorDescriptor() {
@@ -81,7 +81,7 @@ func (this valueObject) canPut(vm *vm, prop string) bool {
 }
 
 // ### ArrayObject [[DefineOwnProperty]] 15.4.5.1
-func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool {
+func (this valueBasicObject) defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool {
 	if objectDebug {
 		log.Printf("Defining %s on %s %t", prop, this, this.odata.IsExtensible())
 	}
@@ -205,7 +205,7 @@ func (this valueObject) defineOwnProperty(vm *vm, prop string, desc *propertyDes
 	return true
 }
 
-func (this valueObject) put(vm *vm, prop string, v value, throw bool) {
+func (this valueBasicObject) put(vm *vm, prop string, v value, throw bool) {
 	if objectDebug {
 		log.Printf("Setting %s = %s on %s", prop, v, this)
 	}
@@ -232,7 +232,7 @@ func (this valueObject) put(vm *vm, prop string, v value, throw bool) {
 	}
 }
 
-func (this valueObject) get(vm *vm, prop string) value {
+func (this valueBasicObject) get(vm *vm, prop string) value {
 	desc := this.getProperty(vm, prop)
 	if desc == nil {
 		return newUndefined()
@@ -247,7 +247,7 @@ func (this valueObject) get(vm *vm, prop string) value {
 	panic("unreachable")
 }
 
-func (this valueObject) getOwnProperty(vm *vm, prop string) *propertyDescriptor {
+func (this valueBasicObject) getOwnProperty(vm *vm, prop string) *propertyDescriptor {
 	props := this.odata.(objectData).Properties()
 	if objectDebug {
 		log.Printf("GetOwnProperty %T.%s %d props", this, prop, len(props))
@@ -265,7 +265,7 @@ func (this valueObject) getOwnProperty(vm *vm, prop string) *propertyDescriptor 
 	return nil
 }
 
-func (this valueObject) getProperty(vm *vm, prop string) *propertyDescriptor {
+func (this valueBasicObject) getProperty(vm *vm, prop string) *propertyDescriptor {
 	pd := this.getOwnProperty(vm, prop)
 	if pd != nil {
 		return pd
@@ -320,31 +320,44 @@ func (this *propertyDescriptor) isAccessorDescriptor() bool {
 	return this.get != nil || this.set != nil
 }
 
-type valueObject struct {
+type valueObject interface {
+	value
+	objectData() objectData
+	defineOwnProperty(vm *vm, prop string, desc *propertyDescriptor, throw bool) bool
+	getOwnProperty(vm *vm, prop string) *propertyDescriptor
+	put(vm *vm, prop string, v value, throw bool)
+	get(vm *vm, prop string) value
+}
+
+type valueBasicObject struct {
 	odata objectData
 }
 
+func (this valueBasicObject) objectData() objectData {
+	return this.odata
+}
+
 type objectData interface {
-	Prototype() *valueObject
+	Prototype() *valueBasicObject
 	Properties() []*propertyDescriptor
 	AppendProperty(pd *propertyDescriptor)
 	IsExtensible() bool
 }
 
-type valueObjectData struct {
+type valueBasicObjectData struct {
 	properties []*propertyDescriptor
 	extensible bool // ### is this needed?
 }
 
-func (this *valueObjectData) AppendProperty(pd *propertyDescriptor) {
+func (this *valueBasicObjectData) AppendProperty(pd *propertyDescriptor) {
 	this.properties = append(this.properties, pd)
 }
 
-func (this *valueObjectData) Properties() []*propertyDescriptor {
+func (this *valueBasicObjectData) Properties() []*propertyDescriptor {
 	return this.properties
 }
 
-func (this *valueObjectData) IsExtensible() bool {
+func (this *valueBasicObjectData) IsExtensible() bool {
 	return this.extensible
 }
 

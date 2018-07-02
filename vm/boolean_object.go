@@ -30,23 +30,23 @@ import (
 	"fmt"
 )
 
-var booleanProto valueObject
+var booleanProto valueBasicObject
 
 type booleanObjectData struct {
-	*valueObjectData
+	*valueBasicObjectData
 	primitiveData bool
 }
 
-func (this *booleanObjectData) Prototype() *valueObject {
+func (this *booleanObjectData) Prototype() *valueBasicObject {
 	return &booleanProto
 }
 
-func newBooleanObject(b bool) valueObject {
-	return valueObject{&booleanObjectData{&valueObjectData{extensible: true}, b}}
+func newBooleanObject(b bool) valueBasicObject {
+	return valueBasicObject{&booleanObjectData{&valueBasicObjectData{extensible: true}, b}}
 }
 
-func defineBooleanCtor(vm *vm) valueObject {
-	booleanProto = valueObject{&rootObjectData{&valueObjectData{extensible: true}}}
+func defineBooleanCtor(vm *vm) valueBasicObject {
+	booleanProto = valueBasicObject{&rootObjectData{&valueBasicObjectData{extensible: true}}}
 	booleanProto.defineDefaultProperty(vm, "toString", newFunctionObject(boolean_prototype_toString, nil), 0)
 	booleanProto.defineDefaultProperty(vm, "valueOf", newFunctionObject(boolean_prototype_valueOf, nil), 0)
 
@@ -70,7 +70,7 @@ func boolean_prototype_toString(vm *vm, f value, args []value) value {
 	switch o := f.(type) {
 	case valueBool:
 		b = bool(o)
-	case valueObject:
+	case valueBasicObject:
 		b = o.odata.(*booleanObjectData).primitiveData
 	default:
 		panic(fmt.Sprintf("Not a boolean! %s", f)) // ### throw
@@ -88,7 +88,7 @@ func boolean_prototype_valueOf(vm *vm, f value, args []value) value {
 	switch o := f.(type) {
 	case valueBool:
 		b = bool(o)
-	case valueObject:
+	case valueBasicObject:
 		b = o.odata.(*booleanObjectData).primitiveData
 	default:
 		panic(fmt.Sprintf("Not a boolean! %s", f)) // ### throw

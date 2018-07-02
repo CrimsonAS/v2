@@ -257,34 +257,34 @@ func (this valueNumber) String() string {
 
 /////////////////////////////////
 
-func (this valueObject) ToInteger() int {
+func (this valueBasicObject) ToInteger() int {
 	return int(this.ToNumber())
 }
 
-func (this valueObject) ToNumber() float64 {
+func (this valueBasicObject) ToNumber() float64 {
 	panic("object conversion not implemented")
 }
 
-func (this valueObject) ToBoolean() bool {
+func (this valueBasicObject) ToBoolean() bool {
 	return true
 }
 
-func (this valueObject) ToString() valueString {
+func (this valueBasicObject) ToString() valueString {
 	if sd, ok := this.odata.(*stringObjectData); ok {
 		return sd.primitiveData.ToString()
 	}
 	return "[object]"
 }
 
-func (this valueObject) ToObject() valueObject {
+func (this valueBasicObject) ToObject() valueObject {
 	return this
 }
 
-func (this valueObject) hasPrimitiveBase() bool {
+func (this valueBasicObject) hasPrimitiveBase() bool {
 	return false
 }
 
-func (this valueObject) String() string {
+func (this valueBasicObject) String() string {
 	return this.ToString().String()
 }
 

@@ -33,19 +33,19 @@ import (
 func TestBooleanObject(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var b = new Boolean(true); b.toString()",
+			in:  "var b = new Boolean(true); return b.toString()",
 			out: newString("true"),
 		},
 		simpleVMTest{
-			in:  "var b = new Boolean(false); b.toString()",
+			in:  "var b = new Boolean(false); return b.toString()",
 			out: newString("false"),
 		},
 		simpleVMTest{
-			in:  "var b = new Boolean(false); b.valueOf()",
+			in:  "var b = new Boolean(false); return b.valueOf()",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "var b = new Boolean(true); b.valueOf()",
+			in:  "var b = new Boolean(true); return b.valueOf()",
 			out: newBool(true),
 		},
 	}

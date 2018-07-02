@@ -35,11 +35,13 @@ import (
 )
 
 type stackFrame struct {
-	retAddr   int
-	vars      []int
-	varValues []value
-	outer     *stackFrame
-	thisArg   value
+	retAddr int
+	vars    []int
+	// ### ideally we would reserve space for these inside data_stack
+	varValues   []value
+	temporaries []value
+	outer       *stackFrame
+	thisArg     value
 }
 
 var stringtable []string
@@ -60,12 +62,15 @@ type vm struct {
 	currentFrame  *stackFrame
 	code          []opcode
 	ip            int
-	funcsToDefine []*parser.FunctionExpression
+	funcsToDefine []*parser.FunctionExpression // codegen
 	returnValue   value
 	ignoreReturn  bool
 	isNew         int
 	canConsume    int
 	lastLoadedVar value
+
+	// from codegen
+	temporaryIndex int
 }
 
 const lookupDebug = false
@@ -131,20 +136,26 @@ var NewCompiler = false
 func New(code string) *vm {
 	ast := parser.Parse(code, true /* ignore comments */)
 
-	vm := vm{stack{}, []stackFrame{}, nil, []opcode{}, 0, nil, nil, false, 0, 0, nil}
+	vm := vm{stack{}, []stackFrame{}, nil, []opcode{}, 0, nil, nil, false, 0, 0, nil, -1}
 	vm.stack = []stackFrame{makeStackFrame(newUndefined(), 0, nil)}
 	vm.currentFrame = &vm.stack[0]
 
 	if NewCompiler {
 		il := []tac{}
-		generateCodeTAC(ast, &il)
+		vm.generateCodeTAC(ast, &il)
 		optimizeTAC(&il)
 
-		for idx, op := range il {
-			log.Printf("%d: %s", idx, op)
+		if execDebug {
+			for idx, op := range il {
+				log.Printf("%d: %s", idx, op)
+			}
 		}
 
 		vm.code = vm.generateBytecode(il)
+
+		if execDebug {
+			vm.DumpCode()
+		}
 	} else {
 		vm.code = vm.generateCode(ast)
 	}
@@ -183,13 +194,12 @@ func (this *vm) popStack(rval value) {
 		}
 	} else {
 		if rval == nil {
-			rval = newUndefined() // ### are we missing a push somewhere?
+			rval = newUndefined()
 		}
 		this.returnValue = rval
 		if execDebug {
 			log.Printf("Returning %s from Run()", rval)
 		}
-
 	}
 }
 
@@ -215,7 +225,7 @@ func (this *vm) Run() value {
 	for ; len(this.stack) > 0 && this.ip < len(this.code); this.ip++ {
 		op := this.code[this.ip]
 		if execDebug {
-			log.Printf("Op %d: %s (stack: %+v)", this.ip, op, this.data_stack)
+			log.Printf("Op %d: %s (stack: %+v §§ temporaries %+v)", this.ip, op, this.data_stack, this.currentFrame.temporaries)
 		}
 		switch op.otype {
 		case PUSH_BOOL:
@@ -464,6 +474,19 @@ func (this *vm) Run() value {
 				panic("'this' in global context not yet supported...")
 			}
 			this.data_stack.push(this.currentFrame.thisArg)
+		case LOAD_TEMPORARY:
+			idx := op.opdata.asInt()
+			if idx >= len(this.currentFrame.temporaries) {
+				this.data_stack.push(newUndefined())
+			} else {
+				this.data_stack.push(this.currentFrame.temporaries[idx])
+			}
+		case STORE_TEMPORARY:
+			idx := op.opdata.asInt()
+			for len(this.currentFrame.temporaries) <= idx {
+				this.currentFrame.temporaries = append(this.currentFrame.temporaries, newUndefined())
+			}
+			this.currentFrame.temporaries[idx] = this.data_stack.pop()
 		case TYPEOF:
 			v := this.data_stack.pop()
 

@@ -33,23 +33,23 @@ import (
 func TestArrayObject(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var b = []; b",
+			in:  "var b = []; return b",
 			out: newArrayObject(nil),
 		},
 		simpleVMTest{
-			in:  "var b = new Array(); b",
+			in:  "var b = new Array(); return b",
 			out: newArrayObject(nil),
 		},
 		simpleVMTest{
-			in:  "var b = [1, 2, 3, 4, 5]; b",
+			in:  "var b = [1, 2, 3, 4, 5]; return b",
 			out: newArrayObject([]value{newNumber(1), newNumber(2), newNumber(3), newNumber(4), newNumber(5)}),
 		},
 		simpleVMTest{
-			in:  "var b = new Array(1, 2, 3, 4, 5); b",
+			in:  "var b = new Array(1, 2, 3, 4, 5); return b",
 			out: newArrayObject([]value{newNumber(1), newNumber(2), newNumber(3), newNumber(4), newNumber(5)}),
 		},
 		simpleVMTest{
-			in:  "var b = Array(1, 2, 3, 4, 5); b",
+			in:  "var b = Array(1, 2, 3, 4, 5); return b",
 			out: newArrayObject([]value{newNumber(1), newNumber(2), newNumber(3), newNumber(4), newNumber(5)}),
 		},
 	}
@@ -59,27 +59,27 @@ func TestArrayObject(t *testing.T) {
 func TestArrayObjectReadWrite(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var b = [1, 2, 3, 4, 5]; b[0]",
+			in:  "var b = [1, 2, 3, 4, 5]; return b[0]",
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  "var b = [1, 2, 3, 4, 5]; b[1]",
+			in:  "var b = [1, 2, 3, 4, 5]; return b[1]",
 			out: newNumber(2),
 		},
 		simpleVMTest{
-			in:  "var b = [1, 2, 3, 4, 5]; b[2]",
+			in:  "var b = [1, 2, 3, 4, 5]; return b[2]",
 			out: newNumber(3),
 		},
 		simpleVMTest{
-			in:  "var b = [1, 2, 3, 4, 5]; b[3]",
+			in:  "var b = [1, 2, 3, 4, 5]; return b[3]",
 			out: newNumber(4),
 		},
 		simpleVMTest{
-			in:  "var b = [1, 2, 3, 4, 5]; b[4]",
+			in:  "var b = [1, 2, 3, 4, 5]; return b[4]",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  "var b = [1, 2, 3, 4, 5]; b[4] = 255; b[4]",
+			in:  "var b = [1, 2, 3, 4, 5]; b[4] = 255; return b[4]",
 			out: newNumber(255),
 		},
 	}

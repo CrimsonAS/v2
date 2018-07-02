@@ -38,7 +38,7 @@ type simpleVMTest struct {
 
 func runSimpleVMTestHelper(t *testing.T, tests []simpleVMTest) {
 	for _, test := range tests {
-		//t.Logf("Testing: %s", test.in)
+		t.Logf("Testing: %s", test.in)
 		vm := New(test.in)
 		assert.Equal(t, vm.Run(), test.out)
 		t.Logf("** Passed %s == %s", test.in, test.out)
@@ -48,11 +48,11 @@ func runSimpleVMTestHelper(t *testing.T, tests []simpleVMTest) {
 func TestStrings(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "\"hello\"",
+			in:  "return \"hello\"",
 			out: newString("hello"),
 		},
 		simpleVMTest{
-			in:  "\"hello\"+\"world\"",
+			in:  "return \"hello\"+\"world\"",
 			out: newString("helloworld"),
 		},
 	}
@@ -63,19 +63,19 @@ func TestStrings(t *testing.T) {
 func TestPostfixOperators(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 0; var b; b = a++; b",
+			in:  "var a = 0; var b; b = a++; return b",
 			out: newNumber(0),
 		},
 		simpleVMTest{
-			in:  "var a = 1; var b; b = a--; b",
+			in:  "var a = 1; var b; b = a--; return b",
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  "var a = 0; var b = 1; a = b++; a",
+			in:  "var a = 0; var b = 1; a = b++; return a",
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  "var a = 0; var b = 1; a = b++; b",
+			in:  "var a = 0; var b = 1; a = b++; return b",
 			out: newNumber(2),
 		},
 	}
@@ -86,51 +86,51 @@ func TestPostfixOperators(t *testing.T) {
 func TestAssignmentOperators(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 0; a = 1; a",
+			in:  "var a = 0; a = 1; return a",
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  "var a = 0; a += 1; a",
+			in:  "var a = 0; a += 1; return a",
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  "var a = 1; a /= 2; a",
+			in:  "var a = 1; a /= 2; return a",
 			out: newNumber(0.5),
 		},
 		simpleVMTest{
-			in:  "var a = 1; a *= 2; a",
+			in:  "var a = 1; a *= 2; return a",
 			out: newNumber(2),
 		},
 		simpleVMTest{
-			in:  "var a = 1; a *= 2; a",
+			in:  "var a = 1; a *= 2; return a",
 			out: newNumber(2),
 		},
 		simpleVMTest{
-			in:  "var a = 5; a %= 2; a",
+			in:  "var a = 5; a %= 2; return a",
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  "var a = 5; a <<= 2; a",
+			in:  "var a = 5; a <<= 2; return a",
 			out: newNumber(20),
 		},
 		simpleVMTest{
-			in:  "var a = 5; a >>= 1; a",
+			in:  "var a = 5; a >>= 1; return a",
 			out: newNumber(2),
 		},
 		simpleVMTest{
-			in:  "var a = 5; a >>>= 1; a",
+			in:  "var a = 5; a >>>= 1; return a",
 			out: newNumber(2),
 		},
 		simpleVMTest{
-			in:  "var a = 55; a &= 123124; a",
+			in:  "var a = 55; a &= 123124; return a",
 			out: newNumber(52),
 		},
 		simpleVMTest{
-			in:  "var a = 55; a ^= 123124; a",
+			in:  "var a = 55; a ^= 123124; return a",
 			out: newNumber(123075),
 		},
 		simpleVMTest{
-			in:  "var a = 55; a |= 123124; a",
+			in:  "var a = 55; a |= 123124; return a",
 			out: newNumber(123127),
 		},
 	}
@@ -141,39 +141,39 @@ func TestAssignmentOperators(t *testing.T) {
 func TestPrefixOperators(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 0; var b; b = ++a; b",
+			in:  "var a = 0; var b; b = ++a; return b",
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  "var a = 0; var b; b = --a; b",
+			in:  "var a = 0; var b; b = --a; return b",
 			out: newNumber(-1),
 		},
 		simpleVMTest{
-			in:  "!false",
+			in:  "return !false",
 			out: newBool(true),
 		},
 		simpleVMTest{
-			in:  "!1",
+			in:  "return !1",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "!!1",
+			in:  "return !!1",
 			out: newBool(true),
 		},
 		simpleVMTest{
-			in:  "!!!1",
+			in:  "return !!!1",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "+3",
+			in:  "return +3",
 			out: newNumber(3),
 		},
 		simpleVMTest{
-			in:  "-3",
+			in:  "return -3",
 			out: newNumber(-3),
 		},
 		simpleVMTest{
-			in:  "~500",
+			in:  "return ~500",
 			out: newNumber(-501),
 		},
 	}
@@ -184,123 +184,123 @@ func TestPrefixOperators(t *testing.T) {
 func TestSimple(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "undefined",
+			in:  "return undefined",
 			out: newUndefined(),
 		},
 		simpleVMTest{
-			in:  "null",
+			in:  "return null",
 			out: newNull(),
 		},
 		simpleVMTest{
-			in:  "2+3",
+			in:  "return 2+3",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  "(2+3)",
+			in:  "return (2+3)",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  "(1+1)",
+			in:  "return (1+1)",
 			out: newNumber(2),
 		},
 		simpleVMTest{
-			in:  "(2+2)*(2+2)",
+			in:  "return (2+2)*(2+2)",
 			out: newNumber(16),
 		},
 		simpleVMTest{
-			in:  "10/2",
+			in:  "return 10/2",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  "if (true) { 10/2 }",
+			in:  "if (true) { return 10/2 }",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  "if (false) { 10/2 }",
+			in:  "if (false) { return 10/2 }",
 			out: newUndefined(),
 		},
 		simpleVMTest{
-			in:  "if (true) { 10/2 }",
+			in:  "if (true) { return 10/2 }",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  "2+2*2+2",
+			in:  "return 2+2*2+2",
 			out: newNumber(8),
 		},
 		simpleVMTest{
-			in:  "1<2",
+			in:  "return 1<2",
 			out: newBool(true),
 		},
 		simpleVMTest{
-			in:  "1<=2",
+			in:  "return 1<=2",
 			out: newBool(true),
 		},
 		simpleVMTest{
-			in:  "2<=1",
+			in:  "return 2<=1",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "2<1",
+			in:  "return 2<1",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "2>1",
+			in:  "return 2>1",
 			out: newBool(true),
 		},
 		simpleVMTest{
-			in:  "1>2",
+			in:  "return 1>2",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "1>=2",
+			in:  "return 1>=2",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "2>=1",
+			in:  "return 2>=1",
 			out: newBool(true),
 		},
 		simpleVMTest{
-			in:  "2>=2",
+			in:  "return 2>=2",
 			out: newBool(true),
 		},
 		simpleVMTest{
-			in:  "1==2",
+			in:  "return 1==2",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "1==1",
+			in:  "return 1==1",
 			out: newBool(true),
 		},
 		simpleVMTest{
-			in:  "1!=2",
+			in:  "return 1!=2",
 			out: newBool(true),
 		},
 		simpleVMTest{
-			in:  "1!=1",
+			in:  "return 1!=1",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "1&&0",
+			in:  "return 1&&0",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "0&&0",
+			in:  "return 0&&0",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "0&&1",
+			in:  "return 0&&1",
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  "1&&1",
+			in:  "return 1&&1",
 			out: newBool(true),
 		},
 		simpleVMTest{
-			in:  "1,2",
+			in:  "return 1,2",
 			out: newNumber(2),
 		},
 		simpleVMTest{
-			in:  "var a; var b; a=0, b=2",
+			in:  "var a; var b; return a=0, b=2",
 			out: newNumber(2), // this will fail with the old compiler.
 		},
 	}
@@ -311,7 +311,7 @@ func TestSimple(t *testing.T) {
 func TestCall(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "f() function f() { 5 }",
+			in:  "return f() function f() { return 5 }",
 			out: newNumber(5),
 		},
 	}
@@ -324,7 +324,7 @@ func TestThis(t *testing.T) {
 	// 'this' gives us no easy way to check it's the right thing...
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "function f() { return this.a }; f.a = 42; f();",
+			in:  "function f() { return this.a }; f.a = 42; return f();",
 			out: newNumber(42),
 		},
 	}
@@ -335,33 +335,33 @@ func TestThis(t *testing.T) {
 func TestTypeof(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var v = undefined; typeof v",
+			in:  "var v = undefined; return typeof v",
 			out: newString("undefined"),
 		},
 		simpleVMTest{
-			in:  "var v = null; typeof v",
+			in:  "var v = null; return typeof v",
 			out: newString("object"),
 		},
 		simpleVMTest{
-			in:  "var v = true; typeof v",
+			in:  "var v = true; return typeof v",
 			out: newString("boolean"),
 		},
 		simpleVMTest{
-			in:  "var v = 5; typeof v",
+			in:  "var v = 5; return typeof v",
 			out: newString("number"),
 		},
 		simpleVMTest{
-			in:  "var v = 'test'; typeof v",
+			in:  "var v = 'test'; return typeof v",
 			out: newString("string"),
 		},
 		simpleVMTest{
-			in:  "var v = new Array(); typeof v",
+			in:  "var v = new Array(); return typeof v",
 			out: newString("object"),
 		},
 		simpleVMTest{
 			// ### these should be equivilent, but are not.
-			//in:  "var v = function() {}; typeof v",
-			in:  "function v() {}; typeof v",
+			//in:  "var v = function() {}; return typeof v",
+			in:  "function v() {}; return typeof v",
 			out: newString("function"),
 		},
 	}
@@ -372,15 +372,15 @@ func TestTypeof(t *testing.T) {
 func TestVar(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 5, b; b = a + 10; b",
+			in:  "var a = 5, b; b = a + 10; return b",
 			out: newNumber(15),
 		},
 		simpleVMTest{
-			in:  "var a = 5; a",
+			in:  "var a = 5; return a",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  "var a = 5; var a; a",
+			in:  "var a = 5; var a; return a",
 			out: newNumber(5),
 		},
 	}
@@ -391,11 +391,11 @@ func TestVar(t *testing.T) {
 func TestWhile(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 0; while (a > 10) a = a + 1; a",
+			in:  "var a = 0; while (a > 10) a = a + 1; return a",
 			out: newNumber(0),
 		},
 		simpleVMTest{
-			in:  "var a = 0; while (a < 10) a = a + 1; a",
+			in:  "var a = 0; while (a < 10) a = a + 1; return a",
 			out: newNumber(10),
 		},
 	}
@@ -406,11 +406,11 @@ func TestWhile(t *testing.T) {
 func TestDoWhile(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 0; do { a = a + 1 } while (a > 10); a",
+			in:  "var a = 0; do { a = a + 1 } while (a > 10); return a",
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  "var a = 0; do { a = a + 1 } while (a < 5); a",
+			in:  "var a = 0; do { a = a + 1 } while (a < 5); return a",
 			out: newNumber(5),
 		},
 	}
@@ -421,11 +421,11 @@ func TestDoWhile(t *testing.T) {
 func TestForStatement(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 0; for (a = 0; a < 5; a = a + 1) { }; a",
+			in:  "var a = 0; for (a = 0; a < 5; a = a + 1) { }; return a",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  "var a = 10; for (; a < 5; a = a + 1) { }; a",
+			in:  "var a = 10; for (; a < 5; a = a + 1) { }; return a",
 			out: newNumber(10),
 		},
 	}
@@ -436,23 +436,23 @@ func TestForStatement(t *testing.T) {
 func TestReturnStatement(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "function f() { return; } var a; a = f(); a;",
+			in:  "function f() { return; } var a; a = f(); return a;",
 			out: newUndefined(),
 		},
 		simpleVMTest{
-			in:  "function f() { return 10; } var a; a = f(); a;",
+			in:  "function f() { return 10; } var a; a = f(); return a;",
 			out: newNumber(10),
 		},
 		simpleVMTest{
-			in:  "function a() { return 10; } function b() { return 5; } var c = a(); c;",
+			in:  "function a() { return 10; } function b() { return 5; } var c = a(); return c;",
 			out: newNumber(10),
 		},
 		simpleVMTest{
-			in:  "function a() { return 10; } function b() { return 5; } var c = b(); c;",
+			in:  "function a() { return 10; } function b() { return 5; } var c = b(); return c;",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  "function a() { return 10; } var b = new a(); b;",
+			in:  "function a() { return 10; } var b = new a(); return b;",
 			out: newNumber(10),
 		},
 	}
@@ -467,11 +467,12 @@ func TestBuiltinFunction(t *testing.T) {
 			return newString("Hello world")
 		}
 
-		vm := New("testFunc()")
+		vm := New("return testFunc()")
 		pf := newFunctionObject(testFunc, nil)
 		vm.defineVar(appendStringtable("testFunc"), pf)
 		assert.Equal(t, vm.Run(), newString("Hello world"))
 	}
+	t.Logf("Test one passed")
 
 	// test multiple arguments, and their order
 	{
@@ -479,11 +480,12 @@ func TestBuiltinFunction(t *testing.T) {
 			return newString(args[0].String() + args[1].String())
 		}
 
-		vm := New("testFunc(\"Hello\", \"World\")")
+		vm := New("return testFunc(\"Hello\", \"World\")")
 		pf := newFunctionObject(testFunc, nil)
 		vm.defineVar(appendStringtable("testFunc"), pf)
 		assert.Equal(t, vm.Run(), newString("HelloWorld"))
 	}
+	t.Logf("Test two passed")
 
 	// test call vs construct
 	{
@@ -495,40 +497,43 @@ func TestBuiltinFunction(t *testing.T) {
 		}
 
 		{
-			vm := New("testFunc()")
+			vm := New("return testFunc()")
 			pf := newFunctionObject(testCall, testConstruct)
 			vm.defineVar(appendStringtable("testFunc"), pf)
 			assert.Equal(t, vm.Run(), newNumber(10))
 		}
+		t.Logf("Call passed")
 		{
-			vm := New("new testFunc()")
+			vm := New("return new testFunc()")
 			pf := newFunctionObject(testCall, testConstruct)
 			vm.defineVar(appendStringtable("testFunc"), pf)
 			assert.Equal(t, vm.Run(), newNumber(20))
 		}
+		t.Logf("New passed")
 	}
+	t.Logf("Test call/construct passed")
 }
 
 func TestJSFunction(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "function f(a) { return a; } var b; b = f(10); b",
+			in:  "function f(a) { return a; } var b; b = f(10); return b",
 			out: newNumber(10),
 		},
 		simpleVMTest{
-			in:  "function f(a) { return a; } var a; a = f(10); a",
+			in:  "function f(a) { return a; } var a; a = f(10); return a",
 			out: newNumber(10),
 		},
 		simpleVMTest{
-			in:  "function f(a, b) { return a; } var a; a = f(10, 5); a",
+			in:  "function f(a, b) { return a; } var a; a = f(10, 5); return a",
 			out: newNumber(10),
 		},
 		simpleVMTest{
-			in:  "function f(a, b) { return b; } var a; a = f(5, 10); a",
+			in:  "function f(a, b) { return b; } var a; a = f(5, 10); return a",
 			out: newNumber(10),
 		},
 		simpleVMTest{
-			in:  "function f(a, b) { return a; } var a; a = f(5, 10); a",
+			in:  "function f(a, b) { return a; } var a; a = f(5, 10); return a",
 			out: newNumber(5),
 		},
 	}
@@ -537,7 +542,7 @@ func TestJSFunction(t *testing.T) {
 }
 
 func TestRecursiveLookups(t *testing.T) {
-	vm := New("function f(a) { if (a > 3) return a; a = a + 1; return f(a); } var n = f(0); n")
+	vm := New("function f(a) { if (a > 3) return a; a = a + 1; return f(a); } var n = f(0); return n")
 	ret := vm.Run()
 	assert.Equal(t, ret, newNumber(4))
 }
@@ -552,7 +557,7 @@ func TestFibonnaci(t *testing.T) {
 	f += "	}\n"
 	f += "	return f;\n"
 	f += "};\n"
-	f += "fibonacci(10)\n"
+	f += "return fibonacci(10)\n"
 
 	var iterative value
 	{
@@ -570,7 +575,7 @@ func TestFibonnaci(t *testing.T) {
 	f += "        return fibonacci(n - 1) + fibonacci(n - 2)\n"
 	f += "    }\n"
 	f += "}\n"
-	f += "fibonacci(10)\n"
+	f += "return fibonacci(10)\n"
 
 	var recursive value
 	{
@@ -585,12 +590,12 @@ func TestFibonnaci(t *testing.T) {
 func TestConditionalExpression(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = 1; var b = a == 1 ? 2 : 3;",
+			in:  "var a = 1; var b = a == 1 ? 2 : 3; return b",
 			out: newNumber(2),
 		},
 		// ### failing, which seems odd...
 		//simpleVMTest{
-		//	in:  "var a = 1; var b = a == 1 ? 2 : 3; b",
+		//	in:  "var a = 1; var b = a == 1 ? 2 : 3; return b",
 		//	out: newNumber(2),
 		//},
 	}
@@ -601,15 +606,15 @@ func TestConditionalExpression(t *testing.T) {
 func TestObjectProperties(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = {}; a.b;",
+			in:  "var a = {}; return a.b;",
 			out: newUndefined(),
 		},
 		simpleVMTest{
-			in:  "var a = {b: 5}; a.b;",
+			in:  "var a = {b: 5}; return a.b;",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  "var a = {b: 5}; a.b = 6; a.b;",
+			in:  "var a = {b: 5}; a.b = 6; return a.b;",
 			out: newNumber(6),
 		},
 	}

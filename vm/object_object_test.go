@@ -33,36 +33,36 @@ import (
 func TestObjectObject(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var b = true; var bo = Object(b); bo.toString()",
+			in:  "var b = true; var bo = Object(b); return bo.toString()",
 			out: newString("true"),
 		},
 		simpleVMTest{
-			in:  "var b = true; var bo = new Object(b); bo.toString()",
+			in:  "var b = true; var bo = new Object(b); return bo.toString()",
 			out: newString("true"),
 		},
 		// missing Number object
 		//simpleVMTest{
-		//	in:  "var b = 1; var bo = new Object(b); bo.toString()",
+		//	in:  "var b = 1; var bo = new Object(b); return bo.toString()",
 		//	out: newString("1"),
 		//},
 		simpleVMTest{
-			in:  "var b = null; var bo = new Object(b); bo.toString()",
+			in:  "var b = null; var bo = new Object(b); return bo.toString()",
 			out: newString("[object Object]"),
 		},
 		simpleVMTest{
-			in:  "var b = undefined; var bo = new Object(b); bo.toString()",
+			in:  "var b = undefined; var bo = new Object(b); return bo.toString()",
 			out: newString("[object Object]"),
 		},
 		simpleVMTest{
-			in:  "var bo = new Object(); bo.toString()",
+			in:  "var bo = new Object(); return bo.toString()",
 			out: newString("[object Object]"),
 		},
 		simpleVMTest{
-			in:  `var bo = new Object(); bo.hasOwnProperty("foo")`,
+			in:  `var bo = new Object(); return bo.hasOwnProperty("foo")`,
 			out: newBool(false),
 		},
 		simpleVMTest{
-			in:  `var bo = new Object(); bo[55] = 66; bo[55]`,
+			in:  `var bo = new Object(); bo[55] = 66; return bo[55]`,
 			out: newNumber(66),
 		},
 	}

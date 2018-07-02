@@ -77,6 +77,9 @@ const (
 	LOAD_INDEXED
 	STORE_INDEXED
 
+	LOAD_TEMPORARY
+	STORE_TEMPORARY
+
 	// Jump ip, relative to the current position.
 	JMP
 
@@ -255,6 +258,10 @@ func (this opcode) String() string {
 		return fmt.Sprintf("LOAD_MEMBER %s", stringtable[int(this.opdata)])
 	case STORE_MEMBER:
 		return fmt.Sprintf("STORE_MEMBER %s", stringtable[int(this.opdata)])
+	case LOAD_TEMPORARY:
+		return fmt.Sprintf("LOAD_TEMPORARY %d", int(this.opdata))
+	case STORE_TEMPORARY:
+		return fmt.Sprintf("STORE_TEMPORARY %d", int(this.opdata))
 	case LOAD_INDEXED:
 		return fmt.Sprintf("LOAD_INDEXED")
 	case STORE_INDEXED:

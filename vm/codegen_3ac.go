@@ -32,6 +32,7 @@ import (
 	"log"
 )
 
+// ### this really needs some cleanup
 type tac_address struct {
 	valid     bool
 	constant  value
@@ -58,7 +59,7 @@ func (this tac_address) isTemp() bool {
 
 func (this tac_address) String() string {
 	if !this.valid {
-		return ""
+		return "(invalid)"
 	}
 	if this.varname != "" {
 		if this.reference != nil {
@@ -83,6 +84,9 @@ type tac struct {
 }
 
 func (this tac) String() string {
+	if this.op == TAC_DECLARE {
+		return fmt.Sprintf("var %s", this.result)
+	}
 	if this.op == TAC_ASSIGN {
 		return fmt.Sprintf("%s = %s", this.result, this.arg1)
 	}
@@ -91,6 +95,12 @@ func (this tac) String() string {
 	}
 	if this.op == TAC_NEW_ARRAY {
 		return fmt.Sprintf("%s = NEW_ARRAY(%s)", this.result, this.arg1)
+	}
+	if this.op == TAC_NEW_OBJECT {
+		return fmt.Sprintf("%s = NEW_OBJECT(%s)", this.result, this.arg1)
+	}
+	if this.op == TAC_END_OBJECT {
+		return fmt.Sprintf("%s = END_OBJECT(%s)", this.result, this.arg1)
 	}
 	if this.op == TAC_PUSH_PARAM {
 		return fmt.Sprintf("PUSH_PARAM %s", this.arg1)
@@ -128,11 +138,9 @@ func (this tac) String() string {
 	return fmt.Sprintf("%s = %s %s %s", this.result, this.arg1, this.op, this.arg2)
 }
 
-var temporaryIndex = -1
-
-func newTemporary() tac_address {
-	temporaryIndex += 1
-	return tac_address{true, newUndefined(), "", nil, temporaryIndex}
+func (this *vm) newTemporary() tac_address {
+	this.temporaryIndex += 1
+	return tac_address{true, newUndefined(), "", nil, this.temporaryIndex}
 }
 
 func newConstant(v value) tac_address {
@@ -170,10 +178,15 @@ const (
 	TAC_TYPEOF      // typeof a
 	TAC_BITWISE_NOT // ~a
 
+	TAC_DECLARE
 	TAC_ASSIGN // =
 
 	TAC_PUSH_ARRAY_MEMBER
 	TAC_NEW_ARRAY
+
+	TAC_PUSH_OBJECT_MEMBER
+	TAC_NEW_OBJECT
+	TAC_END_OBJECT
 
 	TAC_PUSH_PARAM
 	TAC_CALL
@@ -187,6 +200,7 @@ const (
 	TAC_NOT_EQUALS
 	TAC_LESS_THAN_EQ
 	TAC_LOGICAL_AND
+	TAC_LOGICAL_NOT
 
 	TAC_FUNCTION_PARAMETER
 	TAC_FUNCTION
@@ -224,23 +238,23 @@ func pushConstant(addr tac_address) []opcode {
 
 func pushVarOrConstant(addr tac_address) []opcode {
 	codebuf := []opcode{}
-	log.Printf("pushVarOrConstant %+v", addr)
 
 	if addr.isMember() {
-		log.Printf("Loading member on %s", addr.varname)
-		codebuf = append(codebuf, pushVarOrConstant(newVar(addr.varname))...)
-
 		if addr.reference.isVar() {
 			memberIdx := appendStringtable(addr.reference.varname)
+			codebuf = append(codebuf, pushVarOrConstant(newVar(addr.varname))...)
 			codebuf = append(codebuf, newOpcode(LOAD_MEMBER, float64(memberIdx)))
 		} else {
 			codebuf = append(codebuf, pushVarOrConstant(*addr.reference)...)
+			codebuf = append(codebuf, pushVarOrConstant(newVar(addr.varname))...)
 			codebuf = append(codebuf, simpleOp(LOAD_INDEXED))
 		}
 
 	} else if addr.isVar() {
 		if addr.varname == "undefined" {
 			codebuf = append(codebuf, pushConstant(newConstant(newUndefined()))...)
+		} else if addr.varname == "this" {
+			codebuf = append(codebuf, simpleOp(LOAD_THIS))
 		} else {
 			rhsIdx := float64(appendStringtable(addr.varname))
 			codebuf = append(codebuf, newOpcode(LOAD, rhsIdx))
@@ -248,7 +262,7 @@ func pushVarOrConstant(addr tac_address) []opcode {
 	} else if addr.isConstant() {
 		codebuf = append(codebuf, pushConstant(addr)...)
 	} else if addr.isTemp() {
-		log.Printf("No push for possible temporary %+v", addr)
+		codebuf = append(codebuf, newOpcode(LOAD_TEMPORARY, float64(addr.temporary)))
 	} else {
 		panic(fmt.Sprintf("Unknown address type %+v", addr))
 	}
@@ -259,25 +273,20 @@ func pushVarOrConstant(addr tac_address) []opcode {
 func maybePushStore(result tac_address) []opcode {
 	codebuf := []opcode{}
 	if result.isMember() {
-		codebuf = append(codebuf, pushVarOrConstant(newVar(result.varname))...)
-
 		if result.reference.isVar() {
+			codebuf = append(codebuf, pushVarOrConstant(newVar(result.varname))...)
 			memberIdx := appendStringtable(result.reference.varname)
 			codebuf = append(codebuf, newOpcode(STORE_MEMBER, float64(memberIdx)))
 		} else {
 			codebuf = append(codebuf, pushVarOrConstant(*result.reference)...)
+			codebuf = append(codebuf, pushVarOrConstant(newVar(result.varname))...)
 			codebuf = append(codebuf, simpleOp(STORE_INDEXED))
 		}
 	} else if result.isVar() {
 		varIdx := appendStringtable(result.varname)
 		codebuf = append(codebuf, newOpcode(STORE, float64(varIdx)))
 	} else if result.isTemp() {
-		// ### this is not strictly speaking correct. DUPing the top of the
-		// stack doesn't give the correct results. we probably need to teach the
-		// VM about temps.
-		//
-		// on the plus side, we won't crash due to running out of stack now.
-		codebuf = append(codebuf, simpleOp(DUP))
+		codebuf = append(codebuf, newOpcode(STORE_TEMPORARY, float64(result.temporary)))
 	} else {
 		panic(fmt.Sprintf("Unknown address type %+v", result))
 	}
@@ -295,7 +304,7 @@ func callJsFunction(this *vm, params []valueString, addr int) func(vm *vm, f val
 
 	return func(vm *vm, f value, args []value) value {
 		if execDebug {
-			//log.Printf("Calling func! IP %d going to %d, %s", vm.ip, addr, args)
+			log.Printf("Calling func! IP %d going to %d, %s", vm.ip, addr, args)
 		}
 		// alter the IP of the new stack frame the CALL set up to be in
 		// the function's code.
@@ -308,9 +317,6 @@ func callJsFunction(this *vm, params []valueString, addr int) func(vm *vm, f val
 
 		for idx, arg := range intArgs {
 			v := args[idx]
-			if execDebug {
-				//log.Printf("Defining var %s %s", stringtable[arg], v)
-			}
 			vm.defineVar(arg, v)
 		}
 
@@ -334,6 +340,7 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 	paramCount := 0
 
 	for idx, op := range in {
+		//log.Printf("Generating bytecode for %d: %s", idx, op)
 		switch op.op {
 		case TAC_PUSH_PARAM:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
@@ -341,10 +348,12 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 		case TAC_CALL:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, newOpcode(CALL, float64(paramCount)))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 			paramCount = 0
 		case TAC_NEW:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, newOpcode(NEW, float64(paramCount)))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 			paramCount = 0
 		case TAC_FUNCTION_PARAMETER:
 			if !op.arg1.isConstant() {
@@ -352,15 +361,16 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			}
 			paramNames = append(paramNames, op.arg1.constant.(valueString))
 		case TAC_FUNCTION:
-			// Gather all local declarations
 			funcIdx := appendStringtable(op.arg1.constant.String())
 
-			runBuiltin := callJsFunction(this, paramNames, len(codebuf))
+			runBuiltin := callJsFunction(this, paramNames, len(codebuf)-1)
 			callFn := newFunctionObject(runBuiltin, runBuiltin)
 			this.defineVar(funcIdx, callFn)
-			paramNames = paramNames[:]
+			paramNames = []valueString{}
 
 			codebuf = append(codebuf, newOpcode(IN_FUNCTION, float64(funcIdx)))
+
+			// Gather all local declarations
 			declaredVars := make(map[int]bool)
 			for _, nop := range in[idx:] {
 				if nop.op == TAC_END_FUNCTION && nop.arg1 == op.arg1 {
@@ -388,6 +398,9 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_LABEL:
 			labels[op.arg1] = labelInfo{bytecodeOffset: len(codebuf)}
+		case TAC_DECLARE:
+			// used only to ensure the var is declared. if it had an
+			// initializer, it would be TAC_ASSIGN, so we can ignore it here.
 		case TAC_ASSIGN:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, maybePushStore(op.result)...)
@@ -418,6 +431,10 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 		case TAC_JMP:
 			jumps = append(jumps, jumpInfo{label: op.arg1, bytecodeOffset: len(codebuf)})
 			codebuf = append(codebuf, newOpcode(JMP, 0))
+		case TAC_TYPEOF:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(TYPEOF))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_SUB:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
@@ -438,6 +455,45 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, simpleOp(DIVIDE))
 			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_MODULUS:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(MODULUS))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_LEFT_SHIFT:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(LEFT_SHIFT))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_RIGHT_SHIFT:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(RIGHT_SHIFT))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_UNSIGNED_RIGHT_SHIFT:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(UNSIGNED_RIGHT_SHIFT))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_BITWISE_AND:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(BITWISE_AND))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_BITWISE_XOR:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(BITWISE_XOR))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_BITWISE_OR:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(BITWISE_OR))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_BITWISE_NOT:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(BITWISE_NOT))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_NOT_EQUALS:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
@@ -453,10 +509,24 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, simpleOp(LOGICAL_AND))
 			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_LOGICAL_NOT:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(UNOT))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_PUSH_OBJECT_MEMBER:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, simpleOp(DEFINE_PROPERTY))
+		case TAC_NEW_OBJECT:
+			codebuf = append(codebuf, simpleOp(NEW_OBJECT))
+		case TAC_END_OBJECT:
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_PUSH_ARRAY_MEMBER:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 		case TAC_NEW_ARRAY:
 			codebuf = append(codebuf, newOpcode(PUSH_ARRAY, float64(op.arg1.constant.(valueNumber).ToNumber())))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 		default:
 			panic(fmt.Sprintf("unknown tac %s", op))
 		}
@@ -469,9 +539,7 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 	return codebuf
 }
 
-var funcsToDefine []*parser.FunctionExpression
-
-func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
+func (this *vm) generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 	codebuf := []tac{}
 	retaddr := tac_address{}
 
@@ -479,17 +547,17 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 	case *parser.Program:
 		codebuf = append(codebuf, tac{arg1: newConstant(newString("%main")), op: TAC_FUNCTION})
 		for _, s := range n.Body() {
-			generateCodeTAC(s, &codebuf)
+			this.generateCodeTAC(s, &codebuf)
 		}
 		codebuf = append(codebuf, tac{op: TAC_RETURN})
 		codebuf = append(codebuf, tac{arg1: newConstant(newString("%main")), op: TAC_END_FUNCTION})
 
-		for _, afunc := range funcsToDefine {
+		for _, afunc := range this.funcsToDefine {
 			for _, p := range afunc.Parameters {
 				codebuf = append(codebuf, tac{arg1: newConstant(newString(p.String())), op: TAC_FUNCTION_PARAMETER})
 			}
 			codebuf = append(codebuf, tac{arg1: newConstant(newString(afunc.Identifier.String())), op: TAC_FUNCTION})
-			generateCodeTAC(afunc.Body, &codebuf)
+			this.generateCodeTAC(afunc.Body, &codebuf)
 			codebuf = append(codebuf, tac{op: TAC_RETURN})
 			codebuf = append(codebuf, tac{arg1: newConstant(newString(afunc.Identifier.String())), op: TAC_END_FUNCTION})
 		}
@@ -499,134 +567,222 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 			i := n.Initializers[idx]
 
 			if i != nil {
-				exp := generateCodeTAC(i, &codebuf)
+				exp := this.generateCodeTAC(i, &codebuf)
 				codebuf = append(codebuf, tac{result: newVar(v.String()), arg1: exp, op: TAC_ASSIGN})
 			} else {
-				codebuf = append(codebuf, tac{result: newVar(v.String()), arg1: newConstant(newUndefined()), op: TAC_ASSIGN})
+				codebuf = append(codebuf, tac{result: newVar(v.String()), op: TAC_DECLARE})
 			}
 		}
 	case *parser.ExpressionStatement:
 		// We generate an assignment here for the case of: var a = 5; a
 		// such that 'a' is loaded back onto the stack for returning.
 		// This might not be correct?
-		retaddr = newTemporary()
-		es := generateCodeTAC(n.X, &codebuf)
-		codebuf = append(codebuf, tac{result: retaddr, arg1: es, op: TAC_ASSIGN})
+		retaddr = this.newTemporary()
+		es := this.generateCodeTAC(n.X, &codebuf)
+		if es.valid { // ### hmm, how are we getting invalid ES's?
+			codebuf = append(codebuf, tac{result: retaddr, arg1: es, op: TAC_ASSIGN})
+		}
 	case *parser.ReturnStatement:
 		if n.X != nil {
-			retaddr = generateCodeTAC(n.X, &codebuf)
+			retaddr = this.generateCodeTAC(n.X, &codebuf)
 			codebuf = append(codebuf, tac{arg1: retaddr, op: TAC_RETURN})
 		}
 	case *parser.ForStatement:
 		if n.Initializer != nil {
-			generateCodeTAC(n.Initializer, &codebuf)
+			this.generateCodeTAC(n.Initializer, &codebuf)
 		}
-		lbl := newTemporary()
-		endLbl := newTemporary()
+		lbl := this.newTemporary()
+		endLbl := this.newTemporary()
 		codebuf = append(codebuf, tac{arg1: lbl, op: TAC_LABEL})
 		if n.Test != nil {
-			test := generateCodeTAC(n.Test, &codebuf)
+			test := this.generateCodeTAC(n.Test, &codebuf)
 			codebuf = append(codebuf, tac{op: TAC_JNE, arg1: test, arg2: endLbl})
 		}
 		if n.Update != nil {
-			generateCodeTAC(n.Update, &codebuf)
+			this.generateCodeTAC(n.Update, &codebuf)
 		}
-		generateCodeTAC(n.Body, &codebuf)
+		this.generateCodeTAC(n.Body, &codebuf)
 		codebuf = append(codebuf, tac{arg1: lbl, op: TAC_JMP})
 		codebuf = append(codebuf, tac{arg1: endLbl, op: TAC_LABEL})
-	//case *parser.DoWhileStatement:
-	//case *parser.WhileStatement:
-	//case *parser.ConditionalExpression:
-	case *parser.IfStatement:
-		test := generateCodeTAC(n.ConditionExpr, &codebuf)
-		endLbl := newTemporary()
-		codebuf = append(codebuf, tac{op: TAC_JNE, arg1: test, arg2: endLbl})
-		generateCodeTAC(n.ThenStmt, &codebuf) // then
-		codebuf = append(codebuf, tac{arg1: endLbl, op: TAC_LABEL})
-		if n.ElseStmt != nil {
-			generateCodeTAC(n.ElseStmt, &codebuf) // else
+	case *parser.DoWhileStatement:
+		lbl := this.newTemporary()
+		endLbl := this.newTemporary()
+		codebuf = append(codebuf, tac{arg1: lbl, op: TAC_LABEL})
+		this.generateCodeTAC(n.Body, &codebuf)
+		if n.X != nil {
+			test := this.generateCodeTAC(n.X, &codebuf)
+			codebuf = append(codebuf, tac{op: TAC_JNE, arg1: test, arg2: endLbl})
 		}
+		codebuf = append(codebuf, tac{arg1: lbl, op: TAC_JMP})
+		codebuf = append(codebuf, tac{arg1: endLbl, op: TAC_LABEL})
+	case *parser.WhileStatement:
+		lbl := this.newTemporary()
+		endLbl := this.newTemporary()
+		codebuf = append(codebuf, tac{arg1: lbl, op: TAC_LABEL})
+		if n.X != nil {
+			test := this.generateCodeTAC(n.X, &codebuf)
+			codebuf = append(codebuf, tac{op: TAC_JNE, arg1: test, arg2: endLbl})
+		}
+		this.generateCodeTAC(n.Body, &codebuf)
+		codebuf = append(codebuf, tac{arg1: lbl, op: TAC_JMP})
+		codebuf = append(codebuf, tac{arg1: endLbl, op: TAC_LABEL})
+	case *parser.ConditionalExpression: // duplicates IfStatement, but stores to retaddr
+		retaddr = this.newTemporary()
+
+		test := this.generateCodeTAC(n.X, &codebuf)
+		falseLbl := this.newTemporary()
+		endLbl := this.newTemporary()
+		codebuf = append(codebuf, tac{op: TAC_JNE, arg1: test, arg2: falseLbl})
+		then := this.generateCodeTAC(n.Then, &codebuf)
+		codebuf = append(codebuf, tac{result: retaddr, arg1: then, op: TAC_ASSIGN})
+		codebuf = append(codebuf, tac{op: TAC_JMP, arg1: endLbl})
+		codebuf = append(codebuf, tac{arg1: falseLbl, op: TAC_LABEL})
+		if n.Else != nil {
+			els := this.generateCodeTAC(n.Else, &codebuf)
+			codebuf = append(codebuf, tac{result: retaddr, arg1: els, op: TAC_ASSIGN})
+		}
+		codebuf = append(codebuf, tac{arg1: endLbl, op: TAC_LABEL})
+	case *parser.IfStatement:
+		test := this.generateCodeTAC(n.ConditionExpr, &codebuf)
+		falseLbl := this.newTemporary()
+		endLbl := this.newTemporary()
+		codebuf = append(codebuf, tac{op: TAC_JNE, arg1: test, arg2: falseLbl})
+		this.generateCodeTAC(n.ThenStmt, &codebuf) // then
+		codebuf = append(codebuf, tac{op: TAC_JMP, arg1: endLbl})
+		codebuf = append(codebuf, tac{arg1: falseLbl, op: TAC_LABEL})
+		if n.ElseStmt != nil {
+			this.generateCodeTAC(n.ElseStmt, &codebuf) // else
+		}
+		codebuf = append(codebuf, tac{arg1: endLbl, op: TAC_LABEL})
 	case *parser.BlockStatement:
 		for _, s := range n.Body {
-			generateCodeTAC(s, &codebuf)
+			this.generateCodeTAC(s, &codebuf)
 		}
 	case *parser.EmptyStatement:
 
 	case *parser.ArrayLiteral:
 		for _, elem := range n.Elements {
-			param := generateCodeTAC(elem, &codebuf)
+			param := this.generateCodeTAC(elem, &codebuf)
 			codebuf = append(codebuf, tac{op: TAC_PUSH_ARRAY_MEMBER, arg1: param})
 		}
-		retaddr = newTemporary()
+		retaddr = this.newTemporary()
 		codebuf = append(codebuf, tac{result: retaddr, arg1: newConstant(newNumber(float64(len(n.Elements)))), op: TAC_NEW_ARRAY})
-	//case *parser.ObjectLiteral:
-	//case *parser.ThisLiteral:
+	case *parser.ObjectLiteral:
+		retaddr = this.newTemporary()
+		codebuf = append(codebuf, tac{result: retaddr, op: TAC_NEW_OBJECT})
+		for _, prop := range n.Properties {
+			param := this.generateCodeTAC(prop.X, &codebuf)
+			propName := tac_address{}
+
+			switch pk := prop.Key.(type) {
+			case *parser.IdentifierLiteral:
+				propName = newConstant(newString(pk.String()))
+			case *parser.NumericLiteral:
+				propName = newConstant(newString(pk.String()))
+			case *parser.StringLiteral:
+				propName = newConstant(newString(pk.String()))
+			default:
+				panic("unknown object key")
+			}
+
+			codebuf = append(codebuf, tac{op: TAC_PUSH_OBJECT_MEMBER, arg1: propName, arg2: param})
+		}
+		codebuf = append(codebuf, tac{result: retaddr, op: TAC_END_OBJECT})
+	case *parser.ThisLiteral:
+		return newVar("this")
 	case *parser.StringLiteral:
-		retaddr = newTemporary()
+		retaddr = this.newTemporary()
 		codebuf = append(codebuf, tac{result: retaddr, arg1: newConstant(newString(n.String())), op: TAC_ASSIGN})
 	case *parser.IdentifierLiteral:
 		return newVar(n.String())
 	case *parser.NumericLiteral:
-		retaddr = newTemporary()
+		retaddr = this.newTemporary()
 		codebuf = append(codebuf, tac{result: retaddr, arg1: newConstant(newNumber(n.Float64Value())), op: TAC_ASSIGN})
 	case *parser.TrueLiteral:
-		retaddr = newTemporary()
+		retaddr = this.newTemporary()
 		codebuf = append(codebuf, tac{result: retaddr, arg1: newConstant(newBool(true)), op: TAC_ASSIGN})
 	case *parser.FalseLiteral:
-		retaddr = newTemporary()
+		retaddr = this.newTemporary()
 		codebuf = append(codebuf, tac{result: retaddr, arg1: newConstant(newBool(false)), op: TAC_ASSIGN})
 	case *parser.NullLiteral:
-		retaddr = newTemporary()
+		retaddr = this.newTemporary()
 		codebuf = append(codebuf, tac{result: retaddr, arg1: newConstant(newNull()), op: TAC_ASSIGN})
 
 	case *parser.SequenceExpression:
-		lref := generateCodeTAC(n.X, &codebuf)
-		codebuf = append(codebuf, tac{result: newTemporary(), arg1: lref, op: TAC_ASSIGN})
-		retaddr = newTemporary()
-		rref := generateCodeTAC(n.Y, &codebuf)
+		lref := this.generateCodeTAC(n.X, &codebuf)
+		codebuf = append(codebuf, tac{result: this.newTemporary(), arg1: lref, op: TAC_ASSIGN})
+		retaddr = this.newTemporary()
+		rref := this.generateCodeTAC(n.Y, &codebuf)
 		codebuf = append(codebuf, tac{result: retaddr, arg1: rref, op: TAC_ASSIGN})
 	case *parser.FunctionExpression:
-		funcsToDefine = append(funcsToDefine, n)
+		this.funcsToDefine = append(this.funcsToDefine, n)
 	case *parser.NewExpression:
 		c := n.X.(*parser.CallExpression)
 		for _, arg := range c.Arguments {
-			param := generateCodeTAC(arg, &codebuf)
+			param := this.generateCodeTAC(arg, &codebuf)
 			codebuf = append(codebuf, tac{op: TAC_PUSH_PARAM, arg1: param})
 		}
-		fid := generateCodeTAC(c.X, &codebuf)
-		retaddr = newTemporary()
+		fid := this.generateCodeTAC(c.X, &codebuf)
+		retaddr = this.newTemporary()
 		codebuf = append(codebuf, tac{result: retaddr, op: TAC_NEW, arg1: fid})
 	case *parser.CallExpression:
 		for _, arg := range n.Arguments {
-			param := generateCodeTAC(arg, &codebuf)
+			param := this.generateCodeTAC(arg, &codebuf)
 			codebuf = append(codebuf, tac{op: TAC_PUSH_PARAM, arg1: param})
 		}
-		fid := generateCodeTAC(n.X, &codebuf)
-		retaddr = newTemporary()
+		fid := this.generateCodeTAC(n.X, &codebuf)
+		retaddr = this.newTemporary()
 		codebuf = append(codebuf, tac{result: retaddr, op: TAC_CALL, arg1: fid})
 	case *parser.UnaryExpression:
 		if n.IsPrefix() {
-			uref := generateCodeTAC(n.X, &codebuf)
+			uref := this.generateCodeTAC(n.X, &codebuf)
 			switch n.Operator() {
 			case parser.PLUS:
-				retaddr = newTemporary()
+				retaddr = this.newTemporary()
 				codebuf = append(codebuf, tac{result: retaddr, arg1: uref, op: TAC_ASSIGN})
 			case parser.MINUS:
-				retaddr = newTemporary()
+				retaddr = this.newTemporary()
 				codebuf = append(codebuf, tac{result: retaddr, arg1: newConstant(newNumber(0)), op: TAC_SUB, arg2: uref})
+			case parser.LOGICAL_NOT:
+				retaddr = this.newTemporary()
+				codebuf = append(codebuf, tac{result: retaddr, arg1: uref, op: TAC_LOGICAL_NOT, arg2: uref})
 			case parser.INCREMENT:
 				// ### code generation is likely wrong here
-				retaddr = newTemporary()
+				retaddr = this.newTemporary()
 				codebuf = append(codebuf, tac{result: retaddr, arg1: uref, op: TAC_ADD, arg2: newConstant(newNumber(1))})
 				codebuf = append(codebuf, tac{result: uref, arg1: retaddr, op: TAC_ASSIGN})
+			case parser.DECREMENT:
+				// ### code generation is likely wrong here
+				retaddr = this.newTemporary()
+				codebuf = append(codebuf, tac{result: retaddr, arg1: uref, op: TAC_SUB, arg2: newConstant(newNumber(1))})
+				codebuf = append(codebuf, tac{result: uref, arg1: retaddr, op: TAC_ASSIGN})
+			case parser.TYPEOF:
+				retaddr = this.newTemporary()
+				codebuf = append(codebuf, tac{result: retaddr, arg1: uref, op: TAC_TYPEOF})
+			case parser.BITWISE_NOT:
+				retaddr = this.newTemporary()
+				codebuf = append(codebuf, tac{result: retaddr, arg1: uref, op: TAC_BITWISE_NOT})
 			default:
 				panic(fmt.Sprintf("Unhandled prefix op %s", n.Operator()))
 			}
 		} else {
-			panic(fmt.Sprintf("Unhandled postfix op %s", n.Operator()))
+			// i++
+			uref := this.generateCodeTAC(n.X, &codebuf)
+			switch n.Operator() {
+			case parser.INCREMENT:
+				retaddr = this.newTemporary()
+				codebuf = append(codebuf, tac{result: retaddr, arg1: uref, op: TAC_ASSIGN})
+				codebuf = append(codebuf, tac{result: uref, arg1: uref, op: TAC_ADD, arg2: newConstant(newNumber(1))})
+			case parser.DECREMENT:
+				retaddr = this.newTemporary()
+				codebuf = append(codebuf, tac{result: retaddr, arg1: uref, op: TAC_ASSIGN})
+				codebuf = append(codebuf, tac{result: uref, arg1: uref, op: TAC_SUB, arg2: newConstant(newNumber(1))})
+			default:
+				panic(fmt.Sprintf("Unhandled postfix op %s", n.Operator()))
+			}
 		}
 	case *parser.AssignmentExpression:
-		rhs := generateCodeTAC(n.Right, &codebuf)
+		rhs := this.generateCodeTAC(n.Right, &codebuf)
 
 		var realOp tac_op_type
 		switch n.Operator() {
@@ -658,12 +814,17 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 			panic(fmt.Sprintf("unknown operator %s", n.Operator()))
 		}
 
-		retaddr = generateCodeTAC(n.Left, &codebuf)
-		codebuf = append(codebuf, tac{result: retaddr, arg1: rhs, op: realOp})
+		retaddr = this.generateCodeTAC(n.Left, &codebuf)
+
+		if realOp == TAC_ASSIGN {
+			codebuf = append(codebuf, tac{result: retaddr, arg1: rhs, op: realOp})
+		} else {
+			codebuf = append(codebuf, tac{result: retaddr, arg1: retaddr, arg2: rhs, op: realOp})
+		}
 	case *parser.BinaryExpression:
-		rightRef := generateCodeTAC(n.Right, &codebuf)
-		leftRef := generateCodeTAC(n.Left, &codebuf)
-		retaddr = newTemporary()
+		rightRef := this.generateCodeTAC(n.Right, &codebuf)
+		leftRef := this.generateCodeTAC(n.Left, &codebuf)
+		retaddr = this.newTemporary()
 
 		var realOp tac_op_type
 		switch n.Operator() {
@@ -710,17 +871,11 @@ func generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address {
 		codebuf = append(codebuf, tac{result: retaddr, arg1: leftRef, op: realOp, arg2: rightRef})
 
 	case *parser.DotMemberExpression:
-		base := generateCodeTAC(n.X, &codebuf)
-		if !base.isVar() {
-			panic("Not a var")
-		}
+		base := this.generateCodeTAC(n.X, &codebuf)
 		retaddr = newReference(base.varname, newVar(n.Name.String()))
 	case *parser.BracketMemberExpression:
-		base := generateCodeTAC(n.X, &codebuf)
-		if !base.isVar() {
-			panic("Not a var")
-		}
-		retaddr = newReference(base.varname, generateCodeTAC(n.Y, &codebuf))
+		base := this.generateCodeTAC(n.X, &codebuf)
+		retaddr = newReference(base.varname, this.generateCodeTAC(n.Y, &codebuf))
 
 	default:
 		panic(fmt.Sprintf("unknown node %T", node))

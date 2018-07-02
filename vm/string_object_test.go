@@ -33,103 +33,103 @@ import (
 func TestStringObject(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var s = new String(\"hello\"); s.toString()",
+			in:  "var s = new String(\"hello\"); return s.toString()",
 			out: newString("hello"),
 		},
 		simpleVMTest{
-			in:  "var s = new String(\"hello\"); s.valueOf()",
+			in:  "var s = new String(\"hello\"); return s.valueOf()",
 			out: newString("hello"),
 		},
 		simpleVMTest{
-			in:  "var s = new String(); s.valueOf()",
+			in:  "var s = new String(); return s.valueOf()",
 			out: newString(""),
 		},
 		simpleVMTest{
-			in:  "var s = String(\"hello\"); s.toString()",
+			in:  "var s = String(\"hello\"); return s.toString()",
 			out: newString("hello"),
 		},
 		simpleVMTest{
-			in:  "var s = new String(\"hello\"); s.charAt(0)",
+			in:  "var s = new String(\"hello\"); return s.charAt(0)",
 			out: newString("h"),
 		},
 		simpleVMTest{
-			in:  "var s = new String(\"hi\"); s.charAt(1)",
+			in:  "var s = new String(\"hi\"); return s.charAt(1)",
 			out: newString("i"),
 		},
 		simpleVMTest{
-			in:  "var s = new String(\"ABC\"); s.charCodeAt(0)",
+			in:  "var s = new String(\"ABC\"); return s.charCodeAt(0)",
 			out: newNumber(65),
 		},
 		simpleVMTest{
-			in:  `var s = new String("I"); s.concat(" am", " simply", " the", " best")`,
+			in:  `var s = new String("I"); return s.concat(" am", " simply", " the", " best")`,
 			out: newString("I am simply the best"),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABC"); s.indexOf("A")`,
+			in:  `var s = new String("ABC"); return s.indexOf("A")`,
 			out: newNumber(0),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABC"); s.indexOf("B")`,
+			in:  `var s = new String("ABC"); return s.indexOf("B")`,
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABC"); s.indexOf("C")`,
+			in:  `var s = new String("ABC"); return s.indexOf("C")`,
 			out: newNumber(2),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABA"); s.indexOf("A", 1)`,
+			in:  `var s = new String("ABA"); return s.indexOf("A", 1)`,
 			out: newNumber(2),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABA"); s.indexOf("N")`,
+			in:  `var s = new String("ABA"); return s.indexOf("N")`,
 			out: newNumber(-1),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABC"); s.lastIndexOf("A")`,
+			in:  `var s = new String("ABC"); return s.lastIndexOf("A")`,
 			out: newNumber(0),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABC"); s.lastIndexOf("B")`,
+			in:  `var s = new String("ABC"); return s.lastIndexOf("B")`,
 			out: newNumber(1),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABC"); s.lastIndexOf("C")`,
+			in:  `var s = new String("ABC"); return s.lastIndexOf("C")`,
 			out: newNumber(2),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABA"); s.lastIndexOf("A", 1)`,
+			in:  `var s = new String("ABA"); return s.lastIndexOf("A", 1)`,
 			out: newNumber(0),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABA"); s.lastIndexOf("N")`,
+			in:  `var s = new String("ABA"); return s.lastIndexOf("N")`,
 			out: newNumber(-1),
 		},
 		simpleVMTest{
-			in:  `var s = new String("abba"); s.toUpperCase()`,
+			in:  `var s = new String("abba"); return s.toUpperCase()`,
 			out: newString("ABBA"),
 		},
 		simpleVMTest{
-			in:  `var s = new String("ABBA"); s.toLowerCase()`,
+			in:  `var s = new String("ABBA"); return s.toLowerCase()`,
 			out: newString("abba"),
 		},
 		simpleVMTest{
-			in:  `var s = new String("abcd"); s.trim()`,
+			in:  `var s = new String("abcd"); return s.trim()`,
 			out: newString("abcd"),
 		},
 		simpleVMTest{
-			in:  `var s = new String("  abcd"); s.trim()`,
+			in:  `var s = new String("  abcd"); return s.trim()`,
 			out: newString("abcd"),
 		},
 		simpleVMTest{
-			in:  `var s = new String("abcd    "); s.trim()`,
+			in:  `var s = new String("abcd    "); return s.trim()`,
 			out: newString("abcd"),
 		},
 		simpleVMTest{
-			in:  `var s = new String("    abcd    "); s.trim()`,
+			in:  `var s = new String("    abcd    "); return s.trim()`,
 			out: newString("abcd"),
 		},
 		simpleVMTest{
-			in:  `var s = new String("    ab  cd    "); s.trim()`,
+			in:  `var s = new String("    ab  cd    "); return s.trim()`,
 			out: newString("ab  cd"),
 		},
 	}

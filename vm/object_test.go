@@ -7,15 +7,15 @@ import (
 func TestObject(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
-			in:  "var a = {}; a.toString()",
+			in:  "var a = {}; return a.toString()",
 			out: newString("[object Object]"),
 		},
 		simpleVMTest{
-			in:  "var a = {abc: 5}; a.abc",
+			in:  "var a = {abc: 5}; return a.abc",
 			out: newNumber(5),
 		},
 		simpleVMTest{
-			in:  `var a = {abc: 5, def: "test"}; a.def`,
+			in:  `var a = {abc: 5, def: "test"}; return a.def`,
 			out: newString("test"),
 		},
 	}

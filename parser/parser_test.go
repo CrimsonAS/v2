@@ -248,3 +248,9 @@ func TestDotExpression(t *testing.T) {
 	// not giving equal, for some reason
 	assert.Equal(t, RecursivelyPrint(Parse("a.b()", false)), RecursivelyPrint(ep2))
 }
+
+func TestBreakage(t *testing.T) {
+	t.Skipf("Broken!")
+	// this is endlessly looping...
+	//RecursivelyPrint(Parse("var a = ['a', 'b', c', 'd']; return a.indexOf('e')", false))
+}

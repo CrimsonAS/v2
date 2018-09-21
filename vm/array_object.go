@@ -106,7 +106,7 @@ func (this arrayObject) get(vm *vm, prop value) value {
 	if this.valueBasicObject.getOwnProperty(vm, prop) != nil {
 		return this.valueBasicObject.get(vm, prop)
 	} else {
-		return stringProto.get(vm, prop)
+		return arrayProto.get(vm, prop)
 	}
 }
 

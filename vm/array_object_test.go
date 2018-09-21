@@ -85,3 +85,97 @@ func TestArrayObjectReadWrite(t *testing.T) {
 	}
 	runSimpleVMTestHelper(t, tests)
 }
+
+func TestArrayToString(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = ['a', 'b']; return a.toString()",
+			out: newString("a,b"),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}
+
+func TestArrayConcat(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = ['a']; var b = ['b']; c = a.concat(b); return c.toString()",
+			out: newString("a,b"),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}
+
+func TestArrayJoin(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = ['a', 'b']; return a.join('hello')",
+			out: newString("ahellob"),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}
+
+func TestArrayPop(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = []; var b = a.pop(); return b",
+			out: newUndefined(),
+		},
+		simpleVMTest{
+			in:  "var a = [1]; var b = a.pop(); return b",
+			out: newNumber(1),
+		},
+		simpleVMTest{
+			in:  "var a = [1, 2]; var b = a.pop(); return b",
+			out: newNumber(2),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}
+
+func TestArrayPush(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = ['a']; return a.push('b')",
+			out: newNumber(2),
+		},
+		simpleVMTest{
+			in:  "var a = ['a']; a.push('b'); return a.toString()",
+			out: newString("a,b"),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b']; a.push('c'); return a.toString()",
+			out: newString("a,b,c"),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}
+
+func TestArrayReverse(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; a.reverse(); return a.toString()",
+			out: newString("d,c,b,a"),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}
+
+func TestArrayShift(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = []; return a.shift()",
+			out: newUndefined(),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; return a.shift()",
+			out: newString("a"),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; a.shift(); return a.toString()",
+			out: newString("b,c,d"),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}

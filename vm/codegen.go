@@ -324,6 +324,8 @@ func callJsFunction(this *vm, params []valueString, addr int) func(vm *vm, f val
 	}
 }
 
+const codegenDebug = false
+
 func (this *vm) generateBytecode(in []tac) []opcode {
 	codebuf := []opcode{}
 
@@ -340,7 +342,9 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 	paramCount := 0
 
 	for idx, op := range in {
-		//log.Printf("Generating bytecode for %d: %s", idx, op)
+		if codegenDebug {
+			log.Printf("Generating bytecode for %d: %s", idx, op)
+		}
 		switch op.op {
 		case TAC_PUSH_PARAM:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)

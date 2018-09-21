@@ -28,6 +28,7 @@ package vm
 
 import (
 	"fmt"
+	"math"
 )
 
 type arrayObject struct {
@@ -180,6 +181,10 @@ func defineArrayCtor(vm *vm) value {
 	arrayProto.defineDefaultProperty(vm, "push", newFunctionObject(array_prototype_push, nil), 1)
 	arrayProto.defineDefaultProperty(vm, "reverse", newFunctionObject(array_prototype_reverse, nil), 1)
 	arrayProto.defineDefaultProperty(vm, "shift", newFunctionObject(array_prototype_shift, nil), 1)
+	arrayProto.defineDefaultProperty(vm, "slice", newFunctionObject(array_prototype_slice, nil), 2)
+	arrayProto.defineDefaultProperty(vm, "unshift", newFunctionObject(array_prototype_unshift, nil), 1)
+	arrayProto.defineDefaultProperty(vm, "indexOf", newFunctionObject(array_prototype_indexOf, nil), 1)
+	arrayProto.defineDefaultProperty(vm, "lastIndexOf", newFunctionObject(array_prototype_lastIndexOf, nil), 1)
 
 	arrayO := newFunctionObject(array_call, array_ctor)
 	arrayProto.defineDefaultProperty(vm, "constructor", arrayO, 0)
@@ -330,12 +335,105 @@ func array_prototype_shift(vm *vm, f value, args []value) value {
 	}
 }
 
-// ### slice
+func array_prototype_slice(vm *vm, f value, args []value) value {
+	switch typedJ := f.(type) {
+	case arrayObject:
+		lenVal := len(typedJ.primitiveData.values)
+		ulen := uint32(lenVal)
+
+		relativeStart := args[0].ToInteger()
+		k := 0
+		if relativeStart < 0 {
+			k = int(math.Max(float64(int(ulen)+relativeStart), 0))
+		} else {
+			k = int(math.Min(float64(relativeStart), float64(ulen)))
+		}
+
+		relativeEnd := 0
+		switch args[1].(type) {
+		case valueUndefined:
+			relativeEnd = int(ulen)
+		default:
+			relativeEnd = args[1].ToInteger()
+		}
+
+		final := 0
+		if relativeEnd < 0 {
+			final = int(math.Max(float64(int(ulen)+relativeEnd), 0))
+		} else {
+			final = int(math.Min(float64(relativeEnd), float64(ulen)))
+		}
+
+		n := 0
+		newValues := []value{}
+		for ; k < final; k, n = k+1, n+1 {
+			if k >= 0 && k < len(typedJ.primitiveData.values) {
+				kValue := typedJ.primitiveData.values[k]
+				newValues = append(newValues, kValue)
+			}
+		}
+
+		return newArrayObject(newValues)
+	default:
+		panic("TypeError")
+	}
+}
+
+// ###
 // sort
 // splice
-// unshift
-// indexOf
-// lastIndexOf
+
+func array_prototype_unshift(vm *vm, f value, args []value) value {
+	switch typedJ := f.(type) {
+	case arrayObject:
+		newData := make([]value, len(args)+len(typedJ.primitiveData.values))
+		for idx, val := range args {
+			newData[idx] = val
+		}
+		for idx, val := range typedJ.primitiveData.values {
+			newData[len(args)+idx] = val
+		}
+		typedJ.primitiveData.values = newData
+		return newNumber(float64(len(typedJ.primitiveData.values)))
+	default:
+		panic("TypeError")
+	}
+}
+
+// ### fromIndex
+func array_prototype_indexOf(vm *vm, f value, args []value) value {
+	switch typedJ := f.(type) {
+	case arrayObject:
+		for idx, val := range typedJ.primitiveData.values {
+			if strictEqualityComparison(val, args[0]) {
+				return newNumber(float64(idx))
+			}
+		}
+
+		return newNumber(-1)
+	default:
+		panic("TypeError")
+	}
+}
+
+// ### fromIndex
+func array_prototype_lastIndexOf(vm *vm, f value, args []value) value {
+	switch typedJ := f.(type) {
+	case arrayObject:
+		for idx := len(typedJ.primitiveData.values) - 1; idx >= 0; idx-- {
+			val := typedJ.primitiveData.values[idx]
+			if strictEqualityComparison(val, args[0]) {
+				return newNumber(float64(idx))
+			}
+		}
+
+		return newNumber(-1)
+	default:
+		panic("TypeError")
+	}
+}
+
+// ###
 // every
 // some
 // forEach

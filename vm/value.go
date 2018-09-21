@@ -29,6 +29,7 @@ package vm
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 )
 
@@ -73,6 +74,60 @@ type value interface {
 	ToObject() valueObject
 	hasPrimitiveBase() bool
 	String() string
+}
+
+// ES5 11.9.6
+func strictEqualityComparison(x, y value) bool {
+	xt := reflect.TypeOf(x)
+	yt := reflect.TypeOf(y)
+
+	if xt != yt {
+		return false
+	}
+
+	switch x.(type) {
+	case valueUndefined:
+		return true
+	case valueNull:
+		return true
+	case valueNumber:
+		xn := x.ToNumber()
+		yn := y.ToNumber()
+		if math.IsNaN(xn) {
+			return false
+		}
+		if math.IsNaN(yn) {
+			return false
+		}
+		if xn == yn {
+			return true
+		}
+		if xn == +0 && yn == -0 {
+			return true
+		} else if xn == -0 && yn == +0 {
+			return true
+		}
+
+		return false
+	case valueString:
+		return x.ToString() == y.ToString()
+	case valueBool:
+		xb := x.ToBoolean()
+		yb := y.ToBoolean()
+		if xb && yb || !xb && !yb {
+			return true
+		} else {
+			return false
+		}
+	case valueBasicObject:
+		if x.(valueBasicObject).odata == y.(valueBasicObject).odata {
+			return true
+		} else {
+			return false
+		}
+	}
+
+	return false
 }
 
 /////////////////////////////////

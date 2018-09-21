@@ -179,3 +179,82 @@ func TestArrayShift(t *testing.T) {
 	}
 	runSimpleVMTestHelper(t, tests)
 }
+
+func TestArraySlice(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; var b = a.slice(0, 2); return b.toString()",
+			out: newString("a,b"),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; var b = a.slice(0, 3); return b.toString()",
+			out: newString("a,b,c"),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}
+
+func TestArrayUnshift(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = ['c', 'd']; a.unshift('a', 'b'); return a.toString()",
+			out: newString("a,b,c,d"),
+		},
+		simpleVMTest{
+			in:  "var a = ['c', 'd']; return a.unshift('a', 'b')",
+			out: newNumber(4),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}
+
+func TestArrayIndexOf(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; return a.indexOf('e')",
+			out: newNumber(-1),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; return a.indexOf('a')",
+			out: newNumber(0),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; return a.indexOf('b')",
+			out: newNumber(1),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; return a.indexOf('d')",
+			out: newNumber(3),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'a']; return a.indexOf('a')",
+			out: newNumber(0),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}
+func TestArrayLastIndexOf(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; return a.lastIndexOf('e')",
+			out: newNumber(-1),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; return a.lastIndexOf('a')",
+			out: newNumber(0),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; return a.lastIndexOf('b')",
+			out: newNumber(1),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'd']; return a.lastIndexOf('d')",
+			out: newNumber(3),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'a']; return a.lastIndexOf('a')",
+			out: newNumber(3),
+		},
+	}
+	runSimpleVMTestHelper(t, tests)
+}

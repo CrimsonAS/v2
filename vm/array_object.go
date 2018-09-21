@@ -32,7 +32,7 @@ import (
 
 type arrayObject struct {
 	valueBasicObject
-	primitiveData valueArrayData
+	primitiveData *valueArrayData
 }
 
 func (this *arrayObject) Prototype() *valueBasicObject {
@@ -115,12 +115,12 @@ func (this arrayObject) get(vm *vm, prop value) value {
 //////////////////////////////////////
 
 // Copying is necessary, otherwise we'll end up with stack data, which is bad
-func newArrayData(v []value) valueArrayData {
+func newArrayData(v []value) *valueArrayData {
 	ad := valueArrayData{values: make([]value, len(v))}
 	for idx, _ := range v {
 		ad.values[idx] = v[idx]
 	}
-	return ad
+	return &ad
 }
 
 func (this valueArrayData) Get(idx int) value {

@@ -622,6 +622,52 @@ func TestObjectProperties(t *testing.T) {
 	runSimpleVMTestHelper(t, tests)
 }
 
+func TestValueEquality(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = true; var b = true; return a == b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = false; var b = false; return a == b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = false; var b = true; return a != b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = 1.5; var b = 1.5; return a == b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = 1.5; var b = 1.6; return a != b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = 'hello'; var b = 'hello'; return a == b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = 'hello'; var b = 'world'; return a != b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = {}; var b = {}; return a != b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = []; var b = []; return a != b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = {}; var b = a; return a == b",
+			out: newBool(true),
+		},
+	}
+
+	runSimpleVMTestHelper(t, tests)
+}
 func TestValueStrictEquality(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{
@@ -658,6 +704,10 @@ func TestValueStrictEquality(t *testing.T) {
 		},
 		simpleVMTest{
 			in:  "var a = []; var b = []; return a !== b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = {}; var b = a; return a === b",
 			out: newBool(true),
 		},
 	}

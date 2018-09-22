@@ -76,6 +76,116 @@ type value interface {
 	String() string
 }
 
+// ES5 11.9.3
+func abstractEqualityComparison(x, y value) bool {
+	xt := reflect.TypeOf(x)
+	yt := reflect.TypeOf(y)
+
+	if xt == yt {
+		switch x.(type) {
+		case valueUndefined:
+			return true
+		case valueNull:
+			return true
+		case valueNumber:
+			xn := x.ToNumber()
+			yn := y.ToNumber()
+			if math.IsNaN(xn) {
+				return false
+			}
+			if math.IsNaN(yn) {
+				return false
+			}
+			if xn == yn {
+				return true
+			}
+			if xn == +0 && yn == -0 {
+				return true
+			} else if xn == -0 && yn == +0 {
+				return true
+			}
+			return false
+		case valueString:
+			return x.ToString() == y.ToString()
+		case valueBool:
+			xb := x.ToBoolean()
+			yb := y.ToBoolean()
+			if xb && yb || !xb && !yb {
+				return true
+			} else {
+				return false
+			}
+		case valueBasicObject:
+			if x.(valueBasicObject).odata == y.(valueBasicObject).odata {
+				return true
+			} else {
+				return false
+			}
+		}
+		return false
+	}
+
+	switch x.(type) {
+	case valueNull:
+		switch y.(type) {
+		case valueUndefined:
+			return true
+		}
+	case valueUndefined:
+		switch y.(type) {
+		case valueNull:
+			return true
+		}
+	}
+
+	switch x.(type) {
+	case valueNumber:
+		switch y.(type) {
+		case valueString:
+			return x.ToNumber() == y.ToNumber() // ### probably need to handle +/- 0 as above
+		}
+	case valueString:
+		switch y.(type) {
+		case valueNumber:
+			return x.ToNumber() == y.ToNumber() // ### probably need to handle +/- 0 as above
+		}
+	}
+
+	switch x.(type) {
+	case valueBool:
+		return x.ToNumber() == y.ToNumber()
+	}
+
+	switch y.(type) {
+	case valueBool:
+		return x.ToNumber() == y.ToNumber()
+	}
+
+	switch x.(type) {
+	case valueString:
+		switch y.(type) {
+		case valueBasicObject:
+			return valueToPrimitive(x) == valueToPrimitive(y)
+		}
+	case valueNumber:
+		switch y.(type) {
+		case valueBasicObject:
+			return valueToPrimitive(x) == valueToPrimitive(y)
+		}
+	}
+	switch x.(type) {
+	case valueBasicObject:
+		switch y.(type) {
+		case valueString:
+			return valueToPrimitive(x) == valueToPrimitive(y)
+		case valueNumber:
+			return valueToPrimitive(x) == valueToPrimitive(y)
+		}
+	}
+
+	return false
+}
+
 // ES5 11.9.6
 func strictEqualityComparison(x, y value) bool {
 	xt := reflect.TypeOf(x)

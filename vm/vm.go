@@ -340,10 +340,10 @@ func (this *vm) Run() value {
 			this.data_stack.push(newBool(vals[1].ToNumber() >= vals[0].ToNumber()))
 		case EQUALS:
 			vals := this.data_stack.popSlice(2)
-			this.data_stack.push(newBool(vals[1].ToNumber() == vals[0].ToNumber()))
+			this.data_stack.push(newBool(abstractEqualityComparison(vals[1], vals[0])))
 		case NOT_EQUALS:
 			vals := this.data_stack.popSlice(2)
-			this.data_stack.push(newBool(vals[1].ToNumber() != vals[0].ToNumber()))
+			this.data_stack.push(newBool(!abstractEqualityComparison(vals[1], vals[0])))
 		case STRICT_EQUALS:
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newBool(strictEqualityComparison(vals[1], vals[0])))

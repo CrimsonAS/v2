@@ -198,6 +198,8 @@ const (
 	TAC_GREATER_THAN_EQ
 	TAC_EQUALS
 	TAC_NOT_EQUALS
+	TAC_STRICT_EQUALS
+	TAC_STRICT_NOT_EQUALS
 	TAC_LESS_THAN_EQ
 	TAC_LOGICAL_AND
 	TAC_LOGICAL_NOT
@@ -507,6 +509,16 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, simpleOp(EQUALS))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_STRICT_NOT_EQUALS:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(STRICT_NOT_EQUALS))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_STRICT_EQUALS:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(STRICT_EQUALS))
 			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_LOGICAL_AND:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
@@ -866,6 +878,10 @@ func (this *vm) generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address
 			realOp = TAC_EQUALS
 		case parser.NOT_EQUALS:
 			realOp = TAC_NOT_EQUALS
+		case parser.STRICT_EQUALS:
+			realOp = TAC_STRICT_EQUALS
+		case parser.STRICT_NOT_EQUALS:
+			realOp = TAC_STRICT_NOT_EQUALS
 		case parser.LOGICAL_AND:
 			realOp = TAC_LOGICAL_AND
 		default:

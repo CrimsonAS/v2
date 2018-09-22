@@ -379,9 +379,8 @@ func array_prototype_slice(vm *vm, f value, args []value) value {
 	}
 }
 
-// ###
-// sort
-// splice
+// ### sort
+// ### splice
 
 func array_prototype_unshift(vm *vm, f value, args []value) value {
 	switch typedJ := f.(type) {
@@ -448,11 +447,10 @@ func array_prototype_lastIndexOf(vm *vm, f value, args []value) value {
 	}
 }
 
-// ###
-// every
-// some
-// forEach
-// map
-// filter
-// reduce
-// reduceRight
+// ### every
+// ### some
+// ### forEach
+// ### map
+// ### filter
+// ### reduce
+// ### reduceRight

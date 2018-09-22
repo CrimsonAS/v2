@@ -157,6 +157,7 @@ func New(code string) *vm {
 	vm.defineVar(appendStringtable("console"), defineConsoleObject(&vm))
 	vm.defineVar(appendStringtable("Math"), defineMathObject(&vm))
 	vm.defineVar(appendStringtable("Boolean"), defineBooleanCtor(&vm))
+	vm.defineVar(appendStringtable("Number"), defineNumberCtor(&vm))
 	vm.defineVar(appendStringtable("Array"), defineArrayCtor(&vm))
 	vm.defineVar(appendStringtable("String"), defineStringCtor(&vm))
 

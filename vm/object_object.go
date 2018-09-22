@@ -109,14 +109,14 @@ func object_prototype_toString(vm *vm, f value, args []value) value {
 		return newString("[object String]")
 	case functionObject:
 		return newString("[object Function]")
-	case numberObject:
-		return newString("[object Number]")
 	}
 	switch o.objectData().(type) {
 	case *basicObjectData:
 		return newString("[object Object]")
 	case *booleanObjectData:
 		return newString("[object Boolean]")
+	case *numberObjectData:
+		return newString("[object Number]")
 	}
 	panic(fmt.Sprintf("%T is an unknown object type", o.objectData()))
 }

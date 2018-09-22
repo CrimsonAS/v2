@@ -230,6 +230,10 @@ func TestArrayIndexOf(t *testing.T) {
 			in:  "var a = ['a', 'b', 'c', 'a']; return a.indexOf('a')",
 			out: newNumber(0),
 		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'a']; return a.indexOf('a', 1)",
+			out: newNumber(3),
+		},
 	}
 	runSimpleVMTestHelper(t, tests)
 }
@@ -254,6 +258,10 @@ func TestArrayLastIndexOf(t *testing.T) {
 		simpleVMTest{
 			in:  "var a = ['a', 'b', 'c', 'a']; return a.lastIndexOf('a')",
 			out: newNumber(3),
+		},
+		simpleVMTest{
+			in:  "var a = ['a', 'b', 'c', 'a']; return a.lastIndexOf('a', 1)",
+			out: newNumber(0),
 		},
 	}
 	runSimpleVMTestHelper(t, tests)

@@ -400,13 +400,18 @@ func array_prototype_unshift(vm *vm, f value, args []value) value {
 	}
 }
 
-// ### fromIndex
 func array_prototype_indexOf(vm *vm, f value, args []value) value {
+	fromIndex := 0
+
+	if len(args) > 1 {
+		fromIndex = int(args[1].ToInteger())
+	}
+
 	switch typedJ := f.(type) {
 	case arrayObject:
-		for idx, val := range typedJ.primitiveData.values {
-			if strictEqualityComparison(val, args[0]) {
-				return newNumber(float64(idx))
+		for ; fromIndex < len(typedJ.primitiveData.values); fromIndex++ {
+			if strictEqualityComparison(typedJ.primitiveData.values[fromIndex], args[0]) {
+				return newNumber(float64(fromIndex))
 			}
 		}
 
@@ -416,11 +421,21 @@ func array_prototype_indexOf(vm *vm, f value, args []value) value {
 	}
 }
 
-// ### fromIndex
 func array_prototype_lastIndexOf(vm *vm, f value, args []value) value {
+	fromIndex := -1
+	fromIndexSet := false
+
+	if len(args) > 1 {
+		fromIndex = int(args[1].ToInteger())
+		fromIndexSet = true
+	}
+
 	switch typedJ := f.(type) {
 	case arrayObject:
-		for idx := len(typedJ.primitiveData.values) - 1; idx >= 0; idx-- {
+		if fromIndexSet == false {
+			fromIndex = len(typedJ.primitiveData.values) - 1
+		}
+		for idx := fromIndex; idx >= 0; idx-- {
 			val := typedJ.primitiveData.values[idx]
 			if strictEqualityComparison(val, args[0]) {
 				return newNumber(float64(idx))

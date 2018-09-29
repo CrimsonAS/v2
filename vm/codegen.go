@@ -202,6 +202,7 @@ const (
 	TAC_STRICT_NOT_EQUALS
 	TAC_LESS_THAN_EQ
 	TAC_LOGICAL_AND
+	TAC_LOGICAL_OR
 	TAC_LOGICAL_NOT
 
 	TAC_FUNCTION_PARAMETER
@@ -524,6 +525,11 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, simpleOp(LOGICAL_AND))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_LOGICAL_OR:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(LOGICAL_OR))
 			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_LOGICAL_NOT:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
@@ -884,6 +890,8 @@ func (this *vm) generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address
 			realOp = TAC_STRICT_NOT_EQUALS
 		case parser.LOGICAL_AND:
 			realOp = TAC_LOGICAL_AND
+		case parser.LOGICAL_OR:
+			realOp = TAC_LOGICAL_OR
 		default:
 			panic(fmt.Sprintf("unknown operator %s", n.Operator()))
 		}

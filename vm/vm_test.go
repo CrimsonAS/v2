@@ -296,6 +296,22 @@ func TestSimple(t *testing.T) {
 			out: newBool(true),
 		},
 		simpleVMTest{
+			in:  "return 1||0",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "return 0||0",
+			out: newBool(false),
+		},
+		simpleVMTest{
+			in:  "return 0||1",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "return 1||1",
+			out: newBool(true),
+		},
+		simpleVMTest{
 			in:  "return 1,2",
 			out: newNumber(2),
 		},

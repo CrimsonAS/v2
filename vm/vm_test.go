@@ -324,6 +324,21 @@ func TestSimple(t *testing.T) {
 	runSimpleVMTestHelper(t, tests)
 }
 
+func TestInOperator(t *testing.T) {
+	tests := []simpleVMTest{
+		simpleVMTest{
+			in:  "var a = {abc: 5} ; var b = \"abc\" in a; return b",
+			out: newBool(true),
+		},
+		simpleVMTest{
+			in:  "var a = {abc: 5} ; var b = \"def\" in a; return b",
+			out: newBool(false),
+		},
+	}
+
+	runSimpleVMTestHelper(t, tests)
+}
+
 func TestCall(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{

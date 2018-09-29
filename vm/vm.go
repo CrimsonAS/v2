@@ -360,6 +360,10 @@ func (this *vm) Run() value {
 		case LOGICAL_OR:
 			vals := this.data_stack.popSlice(2)
 			this.data_stack.push(newBool(vals[1].ToBoolean() || vals[0].ToBoolean()))
+		case IN:
+			vals := this.data_stack.popSlice(2)
+			rval := vals[0].ToObject()
+			this.data_stack.push(newBool(rval.getOwnProperty(this, vals[1].ToString()) != nil))
 		case POP:
 			this.data_stack.pop()
 		case JMP:

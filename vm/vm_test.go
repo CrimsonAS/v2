@@ -339,6 +339,32 @@ func TestInOperator(t *testing.T) {
 	runSimpleVMTestHelper(t, tests)
 }
 
+func TestInstanceOfOperator(t *testing.T) {
+	// ### these fail, as instanceof is only really implemented up to vm, need runtime work.
+	/*
+		tests := []simpleVMTest{
+			simpleVMTest{
+				in:  "var a = \"hello\"; return a instanceof String",
+				out: newBool(false),
+			},
+			simpleVMTest{
+				in:  "var a = \"hello\"; return a instanceof Number",
+				out: newBool(false),
+			},
+			simpleVMTest{
+				in:  "var a = new String(\"hello\"); return a instanceof String",
+				out: newBool(true),
+			},
+			simpleVMTest{
+				in:  "var a = new Number(5); return a instanceof Number",
+				out: newBool(true),
+			},
+		}
+
+		runSimpleVMTestHelper(t, tests)
+	*/
+}
+
 func TestCall(t *testing.T) {
 	tests := []simpleVMTest{
 		simpleVMTest{

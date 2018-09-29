@@ -28,6 +28,7 @@ package vm
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"strings"
 )
@@ -79,6 +80,11 @@ func (this stringObject) defineOwnProperty(vm *vm, prop value, desc *propertyDes
 
 func (this stringObject) getOwnProperty(vm *vm, prop value) *propertyDescriptor {
 	return nil
+}
+
+func (this stringObject) hasInstance(vm *vm, instance value) bool {
+	log.Printf("stringObject hasInstance: %+v STUB", instance)
+	return false
 }
 
 func (this stringObject) put(vm *vm, prop value, v value, throw bool) {

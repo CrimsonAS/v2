@@ -264,6 +264,11 @@ func (this valueBasicObject) getOwnProperty(vm *vm, prop value) *propertyDescrip
 	return nil
 }
 
+func (this valueBasicObject) hasInstance(vm *vm, instance value) bool {
+	log.Printf("valueBasicObject hasInstance: %+v STUB", instance)
+	return false
+}
+
 func (this valueBasicObject) getProperty(vm *vm, prop value) *propertyDescriptor {
 	pd := this.getOwnProperty(vm, prop)
 	if pd != nil {
@@ -324,6 +329,7 @@ type valueObject interface {
 	objectData() objectData
 	defineOwnProperty(vm *vm, prop value, desc *propertyDescriptor, throw bool) bool
 	getOwnProperty(vm *vm, prop value) *propertyDescriptor
+	hasInstance(vm *vm, instance value) bool
 	put(vm *vm, prop value, v value, throw bool)
 	get(vm *vm, prop value) value
 }

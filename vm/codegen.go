@@ -205,6 +205,8 @@ const (
 	TAC_LOGICAL_OR
 	TAC_LOGICAL_NOT
 	TAC_IN
+	TAC_INSTANCEOF
+	TAC_DELETE
 
 	TAC_FUNCTION_PARAMETER
 	TAC_FUNCTION
@@ -542,6 +544,11 @@ func (this *vm) generateBytecode(in []tac) []opcode {
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, simpleOp(IN))
 			codebuf = append(codebuf, maybePushStore(op.result)...)
+		case TAC_INSTANCEOF:
+			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
+			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
+			codebuf = append(codebuf, simpleOp(INSTANCEOF))
+			codebuf = append(codebuf, maybePushStore(op.result)...)
 		case TAC_PUSH_OBJECT_MEMBER:
 			codebuf = append(codebuf, pushVarOrConstant(op.arg1)...)
 			codebuf = append(codebuf, pushVarOrConstant(op.arg2)...)
@@ -790,6 +797,9 @@ func (this *vm) generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address
 			case parser.BITWISE_NOT:
 				retaddr = this.newTemporary()
 				codebuf = append(codebuf, tac{result: retaddr, arg1: uref, op: TAC_BITWISE_NOT})
+			case parser.DELETE:
+				retaddr = this.newTemporary()
+				codebuf = append(codebuf, tac{result: retaddr, arg1: uref, op: TAC_DELETE})
 			default:
 				panic(fmt.Sprintf("Unhandled prefix op %s", n.Operator()))
 			}
@@ -900,6 +910,8 @@ func (this *vm) generateCodeTAC(node parser.Node, retcodebuf *[]tac) tac_address
 			realOp = TAC_LOGICAL_OR
 		case parser.IN:
 			realOp = TAC_IN
+		case parser.INSTANCEOF:
+			realOp = TAC_INSTANCEOF
 		default:
 			panic(fmt.Sprintf("unknown operator %s", n.Operator()))
 		}

@@ -28,6 +28,7 @@ package vm
 
 import (
 	"fmt"
+	"log"
 	"math"
 )
 
@@ -82,6 +83,11 @@ func (this arrayObject) defineOwnProperty(vm *vm, prop value, desc *propertyDesc
 
 func (this arrayObject) getOwnProperty(vm *vm, prop value) *propertyDescriptor {
 	return nil
+}
+
+func (this arrayObject) hasInstance(vm *vm, instance value) bool {
+	log.Printf("arrayObject hasInstance: %+v STUB", instance)
+	return false
 }
 
 func (this arrayObject) put(vm *vm, prop value, v value, throw bool) {

@@ -364,6 +364,11 @@ func (this *vm) Run() value {
 			vals := this.data_stack.popSlice(2)
 			rval := vals[0].ToObject()
 			this.data_stack.push(newBool(rval.getOwnProperty(this, vals[1].ToString()) != nil))
+		case INSTANCEOF:
+			vals := this.data_stack.popSlice(2)
+			ctor := vals[1].ToObject()
+			log.Printf("%+v instanceof %+v", vals[1], vals[0])
+			this.data_stack.push(newBool(ctor.hasInstance(this, vals[0])))
 		case POP:
 			this.data_stack.pop()
 		case JMP:

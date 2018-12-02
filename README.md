@@ -3,6 +3,8 @@
 ## what
 
 It's a JavaScript engine. Because the world doesn't have enough of those already.
+More seriously, it was written as a research project, and is no longer actively
+maintained.
 
 This one is written entirely in Go, currently as two packages - a parser, and a
 VM. The VM generates bytecode, and then executes it, rather than operating on
@@ -35,5 +37,5 @@ A (very incomplete) list of missing things:
 * implicit semicolon handling at parse time
 * regular expressions
 
-I expect this will improve, assuming the project holds enough interest for me
-to keep working on it, but consider yourself warned.
+You are welcome to fork v2, and do whatever you want with it - further updates
+will likely not be coming to the original codebase.
